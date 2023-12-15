@@ -63,18 +63,18 @@ for (sp in dat){
 	#####################################          
 	# Extract scaffold larger than 2 Mb #
 	#####################################
-	list = list()
+	list2 = list()
 	a = 1
 	for (i in unique(gwas_data$CHR)){
 		Size = length(gwas_data[gwas_data$CHR==i,1])
 		print(Size)
 		if(Size > 5000){
-			list[[a]] = i
+			list2[[a]] = i
 			a = a + 1
 		}
 	}
 
-	Big_scaff = do.call(c,list)
+	Big_scaff = do.call(c,list2)
 	gwas_data = gwas_data[gwas_data$CHR %in% Big_scaff,]
 
 	########################################################################
