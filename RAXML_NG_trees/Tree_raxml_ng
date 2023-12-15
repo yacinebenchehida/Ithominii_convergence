@@ -1,0 +1,118 @@
+#!/bin/bash
+
+usage()
+{
+cat << EOF
+Tree_raxml_ng
+
+Tree_raxml_ng  -S <species> -c <contig> -s <star_position> -e <end_position>
+	 [ -p <prefix> -r <root_tree> -t <threads> -h ]
+
+OPTIONS:
+  -S		usage information and help (this message)
+  -c		unknown repeat sequences in FASTA format
+  -s		known repeat sequences in FASTA format
+  -e		name of species or clade from Repbase to use for annotation
+  -p		existing library of known repeat sequences in FASTA format
+  -r		root tree
+  -t		name for output directory for results
+  -b		number of bootstraps
+  -h		number of computer threads to use in BLAST [1]
+EOF
+}
+
+THREADS=1
+Start=1
+End=1
+
+
+while getopts "hS:c:s:e:p:t:r:" OPTION
+do
+    case $OPTION in
+	help)
+		usage
+		exit 1
+		;;
+	S)
+		SPECIES=$OPTARG
+		;;
+	c)
+		Chromsome=$OPTARG
+		;;
+	s)
+		START=$OPTARG
+		;;
+	e)
+		END=$OPTARG
+		;;
+	p)
+		PREFIX=$OPTARG
+		;;
+        r)
+          	ROOT=$OPTARG
+                ;;
+	t)
+          	THREADS=$OPTARG
+                ;;
+	
+	?)
+		usage
+		exit
+		;;
+    esac
+done
+
+if [[ -z ${SPECIES} ]] || [[ -z ${Chromsome} ]] || [[ -z ${START} ]] || [[ -z ${END} ]] || [[ -z ${PREFIX} ]] || [[ -z ${ROOT} ]]
+then
+	usage
+	exit 1
+fi
+
+OUTGROUP=$(echo $@|perl -pe 's/.+\s+(.+)$/$1/g'|perl -pe 's/^0$/Non OUTGROUP SPECIFID/g')
+
+echo -e Species:"${SPECIES}"
+echo -e Contigs:"${Chromsome}"
+echo -e Start:"${START}"
+echo -e End:"${END}"
+echo -e Prefix:"${PREFIX}"
+echo -e Used threads:"${THREADS}"
+
+if [ ${ROOT} -eq "1" ]; then
+	echo rooting
+else
+	echo unrooted tree
+fi
+
+echo -e Outgroup:"$OUTGROUP"
+
+VCF="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/${SPECIES}/*.vcf.gz"
+Input="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/Raxml-NG/Inputs"
+Path_Output="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/Raxml-NG/Results/${SPECIES}/${PREFIX}"
+PXRR="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/phyx/src/pxrr"
+
+module load RAxML-NG/1.0.2-gompi-2020b
+module load BCFtools/1.15.1-GCC-11.3.0
+module load Armadillo/12.6.2-foss-2023a
+
+mkdir -p $Path_Output
+
+bcftools view --regions $Chromsome:$START-$END $VCF | bcftools view -i 'F_MISSING < 0.1' > $Path_Output/${PREFIX}.vcf
+bgzip $Path_Output/${PREFIX}.vcf
+tabix $Path_Output/${PREFIX}.vcf.gz
+
+python3 vcf2phylip.py -i $Path_Output/${PREFIX}.vcf.gz -m 2 --output-folder $Path_Output --output-prefix ${PREFIX}
+raxml-ng-mpi --all --msa $Path_Output/${PREFIX}.min2.phy --model GTHKY4 --prefix  $Path_Output/$PREFIX --threads $THREADS --bs-trees 30
+
+if [ ${ROOT} -eq "1" ]; then
+	echo rooting
+	$PXRR -t $Path_Output/$PREFIX .raxml.support -g ${ROOT} -o $Path_Output/$PREFIX _Rooted_final_output.newick
+#	Rscript Plot_tree.R $Path_Output $Prefix
+else
+	echo no rooting procedure
+#	Rscript Plot_tree.R $Path_Output $Prefix
+fi
+
+#Rscript Plot_tree.R $Path_Output $Prefix
+
+
+# USAGE: ./Tree.sh Chetone_histrio choosen_prefix ctg001430_1_np1212 1 10000000 
