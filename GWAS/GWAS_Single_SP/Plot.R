@@ -1,25 +1,18 @@
 ##############################
 # Install required libraries #
 ##############################
-#install.packages("ggfortify")
 library(ggfortify)
-#install.packages("qqman")
 library(qqman)
 library(tidyverse)
-#install.packages("ggtext")
 library(ggtext)
-#devtools::install_github("norment/normentR")
 library(normentR)
 library(grid)
 library(gridExtra)
 library(dplyr)
-#install.packages("sjlabelled")
 library("sjlabelled")
 library(ggplot2)
 library(cowplot)
-#remotes::install_github("HanjoStudy/quotidieR")
 library(quotidieR)
-#install.packages("ggthemes")
 library("ggthemes")
 
 ###############
