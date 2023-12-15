@@ -9,15 +9,15 @@ Tree_raxml_ng  -S <species> -c <contig> -s <star_position> -e <end_position>
 	 [ -p <prefix> -r <root_tree> -t <threads> -h ]
 
 OPTIONS:
-  -S		usage information and help (this message)
-  -c		unknown repeat sequences in FASTA format
-  -s		known repeat sequences in FASTA format
-  -e		name of species or clade from Repbase to use for annotation
-  -p		existing library of known repeat sequences in FASTA format
-  -r		root tree
-  -t		name for output directory for results
-  -b		number of bootstraps
-  -h		number of computer threads to use in BLAST [1]
+  -h		usage information and help (this message)
+  -c		Scaffold/Chromosome name
+  -s		Starting position in the VCF
+  -e		End position in the VCF
+  -p		Ouput prefix used by RAXML-NG
+  -r		Root tree (1=Tree rooted; 0=Tree not rooted)
+  -t		Number of threads used by RAXML-NG
+  -b		Number of bootstraps
+  -S		Species name (reference genome name)
 EOF
 }
 
@@ -106,13 +106,8 @@ raxml-ng-mpi --all --msa $Path_Output/${PREFIX}.min2.phy --model GTHKY4 --prefix
 if [ ${ROOT} -eq "1" ]; then
 	echo rooting
 	$PXRR -t $Path_Output/$PREFIX .raxml.support -g ${ROOT} -o $Path_Output/$PREFIX _Rooted_final_output.newick
-#	Rscript Plot_tree.R $Path_Output $Prefix
+	Rscript Plot_tree.R $Path_Output $Prefix
 else
 	echo no rooting procedure
-#	Rscript Plot_tree.R $Path_Output $Prefix
+	Rscript Plot_tree.R $Path_Output $Prefix
 fi
-
-#Rscript Plot_tree.R $Path_Output $Prefix
-
-
-# USAGE: ./Tree.sh Chetone_histrio choosen_prefix ctg001430_1_np1212 1 10000000 
