@@ -2,8 +2,6 @@
 
 import sys
 
-#  reorder_fasta.py <file.fasta> <file.reference>
-
 fasta= open(sys.argv[1])
 ref= open(sys.argv[2])
 
@@ -24,3 +22,5 @@ for seq_name in ref:
     print('\n'.join(seq_dict[seq_name]))
 ref.close()
 sys.exit()
+
+# Usage = reorder_fasta.py *.fa label_order.txt
