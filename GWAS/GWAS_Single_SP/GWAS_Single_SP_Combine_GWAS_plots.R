@@ -68,7 +68,7 @@ for (sp in dat){
 	for (i in unique(gwas_data$CHR)){
 		Size = length(gwas_data[gwas_data$CHR==i,1])
 		print(Size)
-		if(Size > 5000){
+		if(Size > 10000){
 			list2[[a]] = i
 			a = a + 1
 		}
@@ -81,8 +81,10 @@ for (sp in dat){
         # Find scaffold with the peak and the associated points above the peak #
         ########################################################################
 	thres_pval = 0.05/dim(gwas)[1]
-	peak = names(sort(table(gwas_data[gwas_data$P < thres_pval,1]),decreasing=T)[1])
-	print(head(gwas_data))
+	min(unlist(gwas_data$P))
+	peak = gwas_data[gwas_data$P==min(unlist(gwas_data$P)),1]
+	peak_position = gwas_data[gwas_data$P==min(unlist(gwas_data$P)),3]
+	#peak = names(sort(table(gwas_data[gwas_data$P < thres_pval,1]),decreasing=T)[1])
 
 	####################
 	# Plot per species #
@@ -95,7 +97,7 @@ for (sp in dat){
 	theme_bw() +
 	theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(),axis.title.x = element_markdown(size=12),axis.title.y = element_markdown(size=12),plot.title = element_text(hjust = 0.5,size=12), text = element_text(size=14)) +
 	geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) + 
-	geom_point(data = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold,], aes(x= bp_cum/1000000, y = -log10(P)),colour="orange") +
+	geom_point(data = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold & gwas_data$BP > (peak_position - 500000) & gwas_data$BP < (peak_position + 500000),], aes(x= bp_cum/1000000, y = -log10(P)),colour="orange") +
 	ggtitle(sp) 
 	
 	list[[counter]] = p
@@ -105,6 +107,13 @@ for (sp in dat){
 ###########################################
 # Combine all the GWAS in a single figure #
 ###########################################
-png(file="Cortex_GWAS.png",width=600,height=1200,type="cairo")
+#png(file="Cortex_GWAS.png",width=600,height=1200,type="cairo")
+#do.call(grid.arrange,c(list,ncol=1))
+#dev.off()
+
+###########################################
+# Combine all the GWAS in a single figure #
+###########################################
+png(file="Optix_GWAS.png",width=600,height=700,type="cairo")
 do.call(grid.arrange,c(list,ncol=1))
 dev.off()
