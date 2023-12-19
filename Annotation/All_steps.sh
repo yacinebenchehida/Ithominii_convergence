@@ -67,4 +67,4 @@ cd $RESULTS
 # First braker run (based on RNA-seq data)
 braker.pl --genome=$REF_GENOME --bam="$RESULTS"/"$1".bam --softmasking --cores=12  --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config --round 50
 # Second braker run (based on protein data and using hintsfile from previous run; i.e. based on step 1 training)
-braker.pl --genome=$REF_GENOME  --species=$RESULTS/braker/species --hints=$RESULTS/braker/hintsfile.gff --prot_seq=$DATA/proteins.fa --prg=gth --softmasking --skipAllTraining --cores=12 --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
+braker.pl --genome=$REF_GENOME  --species=$RESULTS/braker/species --hints=$RESULTS/braker/hintsfile.gff --prot_seq=$DATA/proteins.fa --prg=exonerate --softmasking --skipAllTraining --cores=12 --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
