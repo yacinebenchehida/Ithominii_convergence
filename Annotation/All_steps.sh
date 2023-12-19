@@ -1,7 +1,7 @@
 #!/bin/bash
 # Author: Yacine Ben Chehida
 
-#SBATCH --time=5-10:10:00
+#SBATCH --time=6-10:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -66,5 +66,18 @@ echo $REF_GENOME
 cd $RESULTS
 # First braker run (based on RNA-seq data)
 braker.pl --genome=$REF_GENOME --bam="$RESULTS"/"$1".bam --softmasking --cores=12  --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config --round 50
+
+#Run ProtHint to obtain hints file, needed by braker running with proteins
+PROTHINTS="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/ProtHint/bin/prothint.py"
+python $PROTHINTS $REF_GENOME $DATA/proteins.fa --threads 12 --workdir $DATA 
+
+# Second braker run (based on Protein data)
+mkdir -p $RESULTS/braker_protein
+braker.pl --genome=$REF_GENOME --hints=$DATA/prothint_augustus.gff --softmasking --cores=12 --workingdir $RESULTS/braker_protein --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
+
+# Combine 1st and 2nd run using tsebra
+TSEBRA="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/TSEBRA"
+$TSEBRA/bin/tsebra.py -c $TSEBRA/config/default.cfg -g $RESULTS/braker/augustus.hints.gtf,$RESULTS/braker_protein/augustus.hints.gtf -e  $RESULTS/braker/hintsfile.gff,$RESULTS/braker_protein/braker_protein/hintsfile.gff -o $RESULTS/braker_combined_tsebra.gtf 
+
 # Second braker run (based on protein data and using hintsfile from previous run; i.e. based on step 1 training)
-braker.pl --genome=$REF_GENOME  --species=$RESULTS/braker/species --hints=$RESULTS/braker/hintsfile.gff --prot_seq=$DATA/proteins.fa --prg=exonerate --softmasking --skipAllTraining --cores=12 --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
+#braker.pl --genome=$REF_GENOME  --species=$RESULTS/braker/species --hints=$RESULTS/braker/hintsfile.gff --prot_seq=$DATA/proteins.fa --prg=exonerate --softmasking --skipAllTraining --cores=16 --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
