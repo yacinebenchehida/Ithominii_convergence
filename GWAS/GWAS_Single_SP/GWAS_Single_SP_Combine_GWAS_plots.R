@@ -129,7 +129,7 @@ for (sp in dat){
 	region$New_end = round((region$Start + region$Stop)/2 + (region$Size/2),digits = 0)
 	dummies <- make_alignment_dummies(region,aes(xmin = New_start, xmax = New_end, y = Species, id = Gene),on = "parn")
 	
-	p_syntheny <- ggplot(posi, aes(xmin = New_start , xmax = New_end,y = Species, fill = Gene)) +
+	p_syntheny <- ggplot(region, aes(xmin = New_start , xmax = New_end,y = Species, fill = Gene)) +
 	geom_gene_arrow()  +
 	scale_color_manual(values = c("black")) + scale_fill_manual(values = c("gold","azure3","coral")) + guides(color = "none")+
 	theme(legend.position="bottom",axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y=element_blank(), axis.text.y=element_blank()) + 
