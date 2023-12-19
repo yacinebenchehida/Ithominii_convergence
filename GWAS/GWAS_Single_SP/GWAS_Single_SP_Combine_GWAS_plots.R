@@ -113,12 +113,12 @@ for (sp in dat){
 	end_plot = max(unlist(region[,c(4,5)]))
 	gwas_zoom = gwas_data[gwas_data$CHR==peak & gwas_data$BP > (start_plot-25000) & gwas_data$BP < (end_plot+25000),]
 
-	p_zoom <- ggplot(gwas_zoom, aes(x = bp_cum/1000000, y = -log10(P))) +
+	p_zoom <- ggplot(gwas_zoom, aes(x = bp_cum, y = -log10(P))) +
         geom_point(color="gray") +
         scale_x_continuous() +
         labs(x = "Genome position (Mb)", y = "-log<sub>10</sub>(p)") +
         theme_bw() +
-        theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(),axis.title.x = element_blank(),axis.title.y = element_blank(), axis.text.y=element_blank(),plot.margin=unit(c(0.8,1,-1.2,1), "cm")) +
+        theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(),axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y = element_blank(), axis.text.y=element_blank(),plot.margin=unit(c(0.8,1,-1.2,1), "cm")) +
         geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8)
 
 	############ 
@@ -137,12 +137,12 @@ for (sp in dat){
 	theme(panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "white"),panel.grid.major.x = element_blank(), panel.grid.major.y = element_line(colour="black"),
         legend.margin=margin(0,0,0,0),
-        legend.box.margin=margin(-10,0,200,0), plot.margin=unit(c(1,1,-0.5,1), "cm")) 
+        legend.box.margin=margin(-10,0,180,0), plot.margin=unit(c(1,1,-0.5,1), "cm")) 
 	
 	######################################  
         # Plot syntheny and GWAS around peak #
         ######################################
-	png(file=paste(sp,"_Zoom_GWAS.png",sep=""),width=600,height=400,type="cairo")
+	png(file=paste(sp,"_Zoom_GWAS.png",sep=""),width=700,height=500)
         grid.arrange(p_zoom,p_syntheny)
         dev.off()
 
@@ -159,3 +159,4 @@ for (sp in dat){
 png(file="Cortex_GWAS.png",width=600,height=1200,type="cairo")
 do.call(grid.arrange,c(list,ncol=1))
 dev.off()
+
