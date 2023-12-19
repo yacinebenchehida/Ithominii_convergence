@@ -118,7 +118,9 @@ for (sp in dat){
         scale_x_continuous() +
         labs(x = "Genome position (Mb)", y = "-log<sub>10</sub>(p)") +
         theme_bw() +
-        theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(),axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y = element_blank(), axis.text.y=element_blank(),plot.margin=unit(c(0.8,1,-1.2,1), "cm")) +
+        theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank()) +
+	theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+	theme(axis.title.y = element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank(), plot.margin=unit(c(0.8,1,-1.2,1), "cm")) +
         geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8)
 
 	############ 
@@ -159,4 +161,3 @@ for (sp in dat){
 png(file="Cortex_GWAS.png",width=600,height=1200,type="cairo")
 do.call(grid.arrange,c(list,ncol=1))
 dev.off()
-
