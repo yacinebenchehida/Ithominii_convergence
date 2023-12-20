@@ -77,7 +77,4 @@ braker.pl --genome=$REF_GENOME --hints=$DATA/prothint_augustus.gff --softmasking
 
 # Combine 1st and 2nd run using tsebra
 TSEBRA="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/TSEBRA"
-$TSEBRA/bin/tsebra.py -c $TSEBRA/config/default.cfg -g $RESULTS/braker/augustus.hints.gtf,$RESULTS/braker_protein/augustus.hints.gtf -e  $RESULTS/braker/hintsfile.gff,$RESULTS/braker_protein/braker_protein/hintsfile.gff -o $RESULTS/braker_combined_tsebra.gtf 
-
-# Second braker run (based on protein data and using hintsfile from previous run; i.e. based on step 1 training)
-#braker.pl --genome=$REF_GENOME  --species=$RESULTS/braker/species --hints=$RESULTS/braker/hintsfile.gff --prot_seq=$DATA/proteins.fa --prg=exonerate --softmasking --skipAllTraining --cores=16 --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
+$TSEBRA/bin/tsebra.py -c $TSEBRA/config/default.cfg -g $RESULTS/braker/augustus.hints.gtf,$RESULTS/braker_protein/augustus.hints.gtf -e  $RESULTS/braker/hintsfile.gff,$RESULTS/braker_protein/hintsfile.gff -o $RESULTS/braker_combined_tsebra.gtf 
