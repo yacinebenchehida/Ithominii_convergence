@@ -31,10 +31,10 @@ do cd $batch
 		fi
 		if [[ $ref == "Chetone_histrio" ]]; then
 			cd $PATH_SCRIPT
-      echo $i $(ls $PATH_REF/$ref/chetone_histrio_mtDNA_05_02_23.fasta)
-      sbatch $PATH_SCRIPT/1_map_sort_RG_dup_merge.sh $i $ref $batch
+      			echo $i $(ls $PATH_REF/$ref/chetone_histrio_mtDNA_05_02_23.fasta)
+      			sbatch $PATH_SCRIPT/1_map_sort_RG_dup_merge.sh $i $ref $batch
 			cd $PATH_DATA	
-    fi
+    		fi
 	done
 	cd $PATH_DATA
 done
