@@ -73,7 +73,8 @@ Input[Input$Orientation=="-",6] = FALSE
 #######################################
 Input = Input[Input$Feature!="stop_codon",]
 Input = Input[Input$Feature!="start_codon",]
-#Input = Input[Input$Feature!="gene",]
 
-
+#####################
+# Write final table #
+#####################
 write.table(x = Input,file = output_name,quote = FALSE, sep = "\t",row.names = FALSE, col.names = FALSE)
