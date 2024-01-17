@@ -174,9 +174,10 @@ for (sp in dat){
 	# Set colors
 	my_colors = rainbow(length(unique(region_genes$Gene)))
 	
+	# Plot syntheny based on genes only (no features plotted)
 	p_syntheny <- ggplot(region_genes, aes(xmin = Start , xmax = End,y = Species, fill = Gene, forward = orientation)) +
 	geom_gene_arrow()  +
-	scale_color_manual(values = c("black")) + scale_fill_manual(values = my_colors) + guides(colour = guide_legend(nrow = 1)) +
+	scale_color_manual(values = c("black")) + scale_fill_manual(values = my_colors) + guides(fill = guide_legend(nrow = 2)) +
 	theme(legend.position="bottom",axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y=element_blank(), axis.text.y=element_blank()) + 
 	theme(panel.border = element_blank()) +
 	theme(panel.grid.minor = element_blank(),
@@ -185,13 +186,39 @@ for (sp in dat){
         legend.box.margin=margin(-10,0,160,0), plot.margin=unit(c(1,1,-0.5,1), "cm")) 
 	print("p_syntheny ready")
 
+	# Plot syntheny based on gene and features
+	region_genes = region[region$Feature!="stop_codon",]
+	region_genes = region_genes[region_genes$Feature!="start_codon",]
+	region_genes = region_genes[region_genes$Feature!="gene",]
+	dummies <- make_alignment_dummies(region_genes,aes(xmin = Start, xmax = End, y = Species, id = Gene, forward=orientation),on = region_genes[1,2])
+	region_genes$alpha = 0.15
+	p_syntheny_features <- ggplot(region_genes, aes(xmin = Start , xmax = End,y = Species, forward = orientation, label = Gene)) +
+	geom_gene_arrow(aes(color = Gene), fill = "white",arrowhead_width = unit(1.5, "mm"),arrow_body_height= unit(4,"mm")) + scale_color_manual(values = my_colors) +
+	geom_subgene_arrow(arrowhead_width = unit(1.5, "mm"),arrow_body_height= unit(4,"mm"),
+	data = region_genes,
+	aes(xmin = Start, xmax = End, xsubmin = From , xsubmax = To, fill = Feature,forward = orientation), alpha = region_genes$alpha) +
+	scale_fill_manual(values = c("grey","white")) +  guides(fill = guide_legend(nrow = 2), color = guide_legend(nrow = 2)) +
+	theme(legend.position="bottom",axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y=element_blank(), axis.text.y=element_blank()) +
+        theme(panel.border = element_blank()) +
+        theme(panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "white"),panel.grid.major.x = element_blank(), panel.grid.major.y = element_line(colour="black"),legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,0,160,0), plot.margin=unit(c(1,1,-0.5,1), "cm"))
+	print("p_syntheny_features ready")
+
 	######################################  
         # Plot syntheny and GWAS around peak #
         ######################################
-	png(file=paste(sp,"_Zoom_GWAS.png",sep=""),width=850,height=600)
+	png(file=paste(sp,"_Zoom_GWAS.png",sep=""),width=600,height=500)
         grid.arrange(p_zoom,p_syntheny)
         dev.off()
+
+	png(file=paste(sp,"_Zoom_GWAS_features.png",sep=""),width=600,height=500)
+        grid.arrange(p_zoom,p_syntheny_features)
+        dev.off()
 	
+	pdf(paste(sp,"_Zoom_GWAS_features.pdf",sep=""),9,7)
+	grid.arrange(p_zoom,p_syntheny_features)
+	dev.off()
+	print("around peak pdf and png plotted")
 	#tiff(file=paste(sp,"_Zoom_GWAS.tif",sep=""), res=300)
 	#grid.arrange(p_zoom,p_syntheny)
         #dev.off()
