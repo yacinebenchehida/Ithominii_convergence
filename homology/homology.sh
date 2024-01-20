@@ -36,7 +36,7 @@ echo FOUND PEAKS
 ##############################
 # Homology based on minimap2 #
 ##############################
-# 1) based on the asm20 algorithm that compares genome on the bases of a divergence up to 20%
+######## 1)based on the asm20 algorithm that compares genome on the bases of a divergence up to 20%
 echo START ASM
 values=("$@")
 
@@ -51,20 +51,23 @@ for ((i = 0; i < ${#values[@]} -1; i += 1)); do # Iterate through adjacent pairs
 done
 echo ASM DONE
 
-# 2) based on the reads mapping algorithm of minimap2. This part works in a sliding windows of 1 kb. 
+######## 2) based on the reads mapping algorithm of minimap2. This part works in a sliding windows of 1 kb. 
 values=("$@")
 
 for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pairsS
+	# Define the pair of species that are going to be analyses in this loop
 	current="${values[k]}"
         next="${values[k + 1]}"
 	echo -e "START SLIDING WINDOWS $current $next"
 	echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tDirection\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tMatchingBases\tMatchLen\tQuality" >  mapping.txt
+	# Define the size of the size genomic interval and the scaffold name that is going to be plotted
 	SIZE=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta|awk '{print $2}')
 	SCAFFOLD=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta|awk '{print $1}')
+	# Define the window slide and the slide (here without overlap so both have the same size)
 	WINDOWS=10000
 	SLIDE=10000
 	echo $SIZE
- 
+ 	# Loop for each pair of species in the define scaffold over windows of the same size
 	for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j=j+$SLIDE)) 
 	do
 		python selection_seq_interval_bis.py $Results/Cortex_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
@@ -72,12 +75,13 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
 		echo -e $i"\t"$j"\t"$RES |perl -pe 's/ /\t/g' >> mapping.txt
 		rm "$current"_"$i"_"$j".fasta
 	done
-
+	# Combine the results
 	mkdir -p $Results/minimap2/sliding_windows_mapping
 	cat mapping.txt|awk 'NF > 2' > $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt
 	rm mapping.txt
+	#Plot the results
 	Rscript ./plot_syntheny.R  $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt $current $next
-
+	# Remove pointless files
 	rm minimap_plot.txt
 	mv *pdf $Results/minimap2/sliding_windows_mapping/
 	echo -E "END SLIDING WINDOWS $current $next"
