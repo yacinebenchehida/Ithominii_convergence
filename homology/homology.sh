@@ -47,6 +47,8 @@ for ((i = 0; i < ${#values[@]} -1; i += 1)); do # Iterate through adjacent pairs
 	mkdir -p $Results/minimap2/asm20
 	echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tDirection\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tMatchingBases\tMatchLen\tQuality" >  $Results/minimap2/asm20/mapping_minimap2_asm20_"$current"_"$next".txt
 	minimap2 -x asm20  $Results/Cortex_"$current".fasta  $Results/Cortex_"$next".fasta|cut -f 1-12 >  $Results/minimap2/asm20/mapping_minimap2_asm20_"$current"_"$next".txt
+	Rscript plot_syntheny_asm.R $Results/minimap2/asm20/mapping_minimap2_asm20_"$current"_"$next".txt $current $next
+	mv *pdf $Results/minimap2/asm20
 	echo -e "RAN MINIMAP2 BASED ON ASM20 $current $next"
 done
 echo ASM DONE
@@ -64,8 +66,8 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
 	SIZE=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta|awk '{print $2}')
 	SCAFFOLD=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta|awk '{print $1}')
 	# Define the window slide and the slide (here without overlap so both have the same size)
-	WINDOWS=10000
-	SLIDE=10000
+	WINDOWS=1000
+	SLIDE=1000
 	echo $SIZE
  	# Loop for each pair of species in the define scaffold over windows of the same size
 	for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j=j+$SLIDE)) 
