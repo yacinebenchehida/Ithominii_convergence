@@ -18,7 +18,7 @@ Method=$last_arg
 if [ "$Method" == "minimap2" ]; then
     ./homology.sh $args_without_last
 elif [ "$Method" == "blast" ]; then
-    ./homology_blast.sh $args_without_last
+    ./blast_homology.sh $args_without_last
 else
-    ./homology_blast.sh $args_without_last; homology.sh $args_without_last 
+    ./blast_homology.sh $args_without_last; homology.sh $args_without_last 
 fi
