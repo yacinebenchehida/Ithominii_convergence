@@ -70,12 +70,12 @@ do
 	#tblastn cortex in both genomes
 	echo -e "start\tend\tquery\tsubject\tidentity\talignmentlength\tmismatches\tgapopens\tquerystart\tqueryend\tsubjectstart\tsubjectend\tevalue\tbitscore" > cortex_blasting.txt
 	ref_genome1="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$current"
-        fasta_sequence1=$(ls $ref_genome|grep -E "*.fa$|*.fasta$")
+        fasta_sequence1=$(ls $ref_genome1|grep -E "*.fa$|*.fasta$")
 	makeblastdb -in $ref_genome1/$fasta_sequence1 -dbtype nucl -input_type fasta -out $current -title $current	
 	tblastn -query ../Inputs/cortex.fasta -db "$current" -outfmt 7|grep -v "#"|head -n 1 >> cortex_blasting.txt
 	
 	ref_genome2="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$next"
-        fasta_sequence2=$(ls $ref_genome|grep -E "*.fa$|*.fasta$")
+        fasta_sequence2=$(ls $ref_genome2|grep -E "*.fa$|*.fasta$")
         makeblastdb -in $ref_genome2/$fasta_sequence2 -dbtype nucl -input_type fasta -out $next -title $next
 	tblastn -query ../Inputs/cortex.fasta -db "$next" -outfmt 7|grep -v "#"|head -n 1 >> cortex_blasting.txt
 
