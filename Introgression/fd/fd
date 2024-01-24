@@ -1,0 +1,172 @@
+#!/bin/bash
+
+usage()
+{
+cat << EOF
+./fd  -v <vcf> -c <chromosome> -s <star_position> -e <end_position> -f <pop_file> -p1 <taxa1> -p2 <taxa2> -p3 <taxa3> -po <outgroup> -w <window_size> -o <path_output> -n <name> -h
+
+OPTIONS:
+  -v            Name of the vcf input
+  -c		Contig/Scaffold/Chromosome name
+  -s		Starting position in the VCF
+  -e		End position in the VCF
+  -f            Population file
+  -p1		Taxa 1 name
+  -p2		Taxa 2 name
+  -p3		Taxa 3 name
+  -po		Outgroup name
+  -w		Window size (in number of SNPs) for computing fd and fdM
+  -o		Output folder  path
+  -n            Prefix used for output files
+  -h            usage information and help (this message
+EOF
+exit 0
+}
+
+# Parse command-line options
+options=$(getopt -o v:c:s:e:f:p1:p2:p3:r:w:o:n:h -- "$@")
+
+# Check for getopt errors
+if [ $? -ne 0 ]; then
+  usage
+fi
+
+
+# Extract options and their arguments
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+		-v)
+		  VCF=$2
+		  shift 2
+		  ;;
+		-c)
+		  CHR=$2
+		  shift 2
+		  ;;
+		-s)
+		  START=$2
+		  shift 2
+		  ;;
+		-e)
+		  END=$2
+		  shift 2
+		  ;;
+		-f)
+		  POP=$2
+		  shift 2
+		  ;;
+		-p1)
+		  P1=$2
+		  shift 2
+		  ;;
+		-p2)
+		  P2=$2
+		  shift 2
+		  ;;
+		-p3)
+		  P3=$2
+		  shift 2
+		  ;;
+		-po)
+		  PO=$2
+		  shift 2
+		  ;;
+		-w)
+		  WINDOW=$2
+		  shift 2
+		  ;;
+		-o)
+		  OUTPUT_PATH=$2
+		  shift 2
+		  ;;
+		-n)
+		  PREFIX=$2
+		  shift 2
+		  ;;
+		-h)
+		  usage
+		  ;;
+		--)
+		  shift
+		  break
+		  ;;
+		*)
+		  usage
+		  ;;
+	esac
+done
+
+# Check if all mandatory arguments are provided
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $POP ]] || [[ -z $P1 ]] || [[ -z $P2 ]] || [[ -z $P3 ]] || [[ -z $PO ]] || [[ -z $WINDOW ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
+then
+	usage
+	exit 1
+fi
+
+# Display arguments
+echo -e VCF file:"${VCF}"
+echo -e Chromosome:"${CHR}"
+echo -e Start:"${START}"
+echo -e End:"${END}"
+echo -e Population file:"${POP}"
+echo -e P1:"${P1}"
+echo -e P2:"${P2}"
+echo -e P3:"${P3}"
+echo -e Outgroup:"${PO}"
+echo -e Window size:"${WINDOW}"
+echo -e Output path:"${OUTPUT_PATH}"
+echo -e Prefix:"${PREFIX}"
+
+###############################
+# 0 - Load necessry libraries #
+###############################
+module load HTSlib/1.15.1-GCC-11.3.0
+module load BCFtools/1.15.1-GCC-11.3.0
+
+#######################
+# 1 - Set output path #
+#######################
+mkdir -p  $OUTPUT_PATH/$PREFIX
+SCRIPT="/shared/biology/bioldata1/bl-kd684/yacine/Conv_Evol/Tools/genomics_general"
+
+################################################
+# 2 - GENERATE A VCF FOR THE REGION TO ANALYSE #
+################################################   
+bcftools view --regions $Chromsome:$Start-$End $VCF | bcftools view -i 'F_MISSING < 0.80' > $OUTPUT_PATH/"$PREFIX".vcf
+bgzip $OUTPUT_PATH/"$PREFIX".vcf.gz
+tabix $OUTPUT_PATH/"$PREFIX".vcf.gz
+
+#########################################################################                      
+# 3 - Create the geno file necessary to get the sliding window analyses #
+#########################################################################
+python3 $SCRIPT/VCF_processing/parseVCF.py -i $OUTPUT_PATH/"$PREFIX".vcf.gz -o $OUTPUT_PATH/"$PREFIX".geno.gz
+
+
+##############################       
+# 4 - Get the phenotype file #
+############################## 
+for i in $P1 $P2 $P3 $PO; do cat $POP_FILE| grep $i >>  $OUTPUT_PATH/"$PREFIX"_phenotype_file.txt; done
+
+#############################
+# 5 - fd in sliding windows #
+#############################
+python3 $SCRIPT/ABBABABAwindows.py \
+-g  $OUTPUT_PATH/"$PREFIX".geno.gz \
+-f phased \
+-o $OUTPUT_PATH/output.csv \
+--windType sites \
+-w $WINDOW -m 1 \
+-P1 $P1 -P2 $P2 -P3 $P3 -O $PO \
+-T 4 \
+--minData 0.2 \
+--popsFile $OUTPUT_PATH/"$PREFIX"_phenotype_file.txt \
+--writeFailedWindows
+
+cat $OUTPUT_PATH/output.csv | grep -v nan|perl -pe 's/,/\t/g' > $OUTPUT_PATH/Results_"$CHR"_"$START"_"$END"_"$P1"_"$P2"_"$P3"_"$PO".txt
+
+#############################
+# 6 - Plotting ABBA and fd  #
+#############################
+PATH_PARENT_FOLDER=$(readlink -f ../)
+Rscript ./Statistics.R $PATH_PARENT_FOLDER  $PREFIX Results_"$CHR"_"$START"_"$END"_"$P1"_"$P2"_"$P3"_"$PO".txt $WINDOW $P1 $P2 $P3 $PO
