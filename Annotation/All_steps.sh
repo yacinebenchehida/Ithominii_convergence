@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
-#SBATCH --mem=50G
+#SBATCH --mem=60G
 #SBATCH --account=BIOL-SPECGEN-2018
 #SBATCH --job-name=ST_BR
 #SBATCH --partition=week
@@ -23,7 +23,7 @@ module load RepeatModeler/2.0.4-foss-2022a
 # 1 - Set reference genomes #
 #############################
 DATA="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/7_genome_annotation/Data/$1"
-FASTA_REF=$(ls $DATA|grep -E "*.fa$|*.fasta$")
+FASTA_REF=$(ls $DATA|grep -E "*.fa$|*.fasta$"|grep -v protein)
 RESULTS="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/7_genome_annotation/Results/$1"
 
 echo $DATA/$FASTA_REF
@@ -61,20 +61,30 @@ echo SAM CONVERT TO BAM FILE
 ##################
 # 6 - Run BRAKER #
 ##################
-REF_GENOME=$(ls $DATA/*.fasta.masked)
+REF_GENOME=$(ls $DATA/*.masked)
 echo $REF_GENOME
 cd $RESULTS
 # First braker run (based on RNA-seq data)
 braker.pl --genome=$REF_GENOME --bam="$RESULTS"/"$1".bam --softmasking --cores=12  --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config --round 50
+echo BRAKER on RNAseq ran
 
 #Run ProtHint to obtain hints file, needed by braker running with proteins
 PROTHINTS="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/ProtHint/bin/prothint.py"
 python $PROTHINTS $REF_GENOME $DATA/proteins.fa --threads 12 --workdir $DATA 
+echo ProtHint ran
 
 # Second braker run (based on Protein data)
 mkdir -p $RESULTS/braker_protein
 braker.pl --genome=$REF_GENOME --hints=$DATA/prothint_augustus.gff --softmasking --cores=12 --workingdir $RESULTS/braker_protein --AUGUSTUS_CONFIG_PATH=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/Augustus/config 
+echo braker based on protein evidence ran
 
 # Combine 1st and 2nd run using tsebra
 TSEBRA="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/TSEBRA"
 $TSEBRA/bin/tsebra.py -c $TSEBRA/config/default.cfg -g $RESULTS/braker/augustus.hints.gtf,$RESULTS/braker_protein/augustus.hints.gtf -e  $RESULTS/braker/hintsfile.gff,$RESULTS/braker_protein/hintsfile.gff -o $RESULTS/braker_combined_tsebra.gtf 
+echo TSEBRA finished
+
+##########################################
+# 7 - Get protein sequences for all CDSs #
+##########################################
+module load gffread/0.12.7-GCCcore-11.2.0
+gffread $RESULTS/braker_combined_tsebra.gtf -g $REF_GENOME -w "$1"_spliced_exon.fasta -x "$1"_spliced_CDS.fasta -y "$1"_translated_CDS.fasta
