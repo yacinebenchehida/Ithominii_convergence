@@ -13,7 +13,7 @@ module load SRA-Toolkit/3.0.3-gompi-2022a
 module load pigz/2.7-GCCcore-12.2.0
 
 # Figure out samples to download
-SAMPLES=$($EDIRECT/esearch -db sra -query PRJEB60199 | $EDIRECT/efetch -format runinfo | cut -d "," -f 1,5,8,29|perl -pe 's/,/\t/g'|awk 'NR > 1 {print $1}'|grep -E "ERR11837472$
+SAMPLES=$($EDIRECT/esearch -db sra -query PRJEB60199 | $EDIRECT/efetch -format runinfo | cut -d "," -f 1,5,8,29|perl -pe 's/,/\t/g'|awk 'NR > 1 {print $1}'|grep -E "ERR11837472|ERR12245539")
 echo $SAMPLES
 
 # Download sample and transform them into R1 and R2 reads
@@ -24,4 +24,4 @@ for i in *_1.fastq; do echo $i; cat $i >> RNA_seq_Melinaea_R1.fastq ; done
 for i in *_2.fastq; do echo $i; cat $i >> RNA_seq_Melinaea_R2.fastq ; done
 
 # gzip the R1 and R2 fastq files
-for i in RNA*; do pigz -d -p 12 $i; done
+for i in RNA*; do pigz -p 12 $i; done
