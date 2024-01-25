@@ -1,3 +1,5 @@
+#####THIS SCRIPT IS NOT FINALIZED####
+
 ##################
 # load libraries #
 ##################
