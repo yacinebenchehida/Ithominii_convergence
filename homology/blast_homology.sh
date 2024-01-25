@@ -68,7 +68,7 @@ do
 	done
 	
 	#tblastn cortex in both genomes
-	echo -e "start\tend\tquery\tsubject\tidentity\talignmentlength\tmismatches\tgapopens\tquerystart\tqueryend\tsubjectstart\tsubjectend\tevalue\tbitscore" > cortex_blasting.txt
+	echo -e "query\tsubject\tidentity\talignmentlength\tmismatches\tgapopens\tquerystart\tqueryend\tsubjectstart\tsubjectend\tevalue\tbitscore" > cortex_blasting.txt
 	ref_genome1="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$current"
         fasta_sequence1=$(ls $ref_genome1|grep -E "*.fa$|*.fasta$")
 	makeblastdb -in $ref_genome1/$fasta_sequence1 -dbtype nucl -input_type fasta -out $current -title $current	
@@ -80,4 +80,8 @@ do
 	tblastn -query ../Inputs/cortex.fasta -db "$next" -outfmt 7|grep -v "#"|head -n 1 >> cortex_blasting.txt
 
 	# Combine the results
+	Rscript plot_syntheny_blast.R  mapping_"$current"_"$next".txt $SIZE $current $next
+ 	rm minimap_plot.txt
+	mv *pdf $Results/minimap2/sliding_windows_mapping/
+	echo -E "END SLIDING WINDOWS $current $next"
 done
