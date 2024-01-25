@@ -14,6 +14,8 @@ Results="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Resul
 data_gwas="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data"
 Inputs="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs"
 
+mkdir -p $Results/blast
+
 ############################################################################################
 # Find top SNPs in the GWAS and create a fasta based on a windows of 150kb around the peak #
 ############################################################################################
@@ -81,7 +83,7 @@ do
 
 	# Combine the results
 	Rscript plot_syntheny_blast.R  mapping_"$current"_"$next".txt $SIZE $current $next
- 	rm minimap_plot.txt
-	mv *pdf $Results/minimap2/sliding_windows_mapping/
+	rm minimap_plot.txt
+	mv *pdf $Results/blast
 	echo -E "END SLIDING WINDOWS $current $next"
 done
