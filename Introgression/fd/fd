@@ -123,50 +123,54 @@ echo -e Prefix:"${PREFIX}"
 ###############################
 module load HTSlib/1.15.1-GCC-11.3.0
 module load BCFtools/1.15.1-GCC-11.3.0
+module load R/4.2.1-foss-2022a
 
 #######################
 # 1 - Set output path #
 #######################
 mkdir -p  $OUTPUT_PATH/$PREFIX
-SCRIPT="/shared/biology/bioldata1/bl-kd684/yacine/Conv_Evol/Tools/genomics_general"
+SCRIPT="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/genomics_general"
+echo OUTPUT PATH SET
 
 ################################################
 # 2 - GENERATE A VCF FOR THE REGION TO ANALYSE #
 ################################################   
-bcftools view --regions $Chromsome:$Start-$End $VCF | bcftools view -i 'F_MISSING < 0.80' > $OUTPUT_PATH/"$PREFIX".vcf
-bgzip $OUTPUT_PATH/"$PREFIX".vcf.gz
-tabix $OUTPUT_PATH/"$PREFIX".vcf.gz
+bcftools view --regions $CHR:$START-$END $VCF | bcftools view -i 'F_MISSING < 0.80' > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+echo SUBSET GENOMIC REGION VCF READY
 
 #########################################################################                      
 # 3 - Create the geno file necessary to get the sliding window analyses #
 #########################################################################
-python3 $SCRIPT/VCF_processing/parseVCF.py -i $OUTPUT_PATH/"$PREFIX".vcf.gz -o $OUTPUT_PATH/"$PREFIX".geno.gz
-
+python3 $SCRIPT/VCF_processing/parseVCF.py -i $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX".geno.gz
+echo GENO FILE READY
 
 ##############################       
 # 4 - Get the phenotype file #
 ############################## 
-for i in $P1 $P2 $P3 $PO; do cat $POP_FILE| grep $i >>  $OUTPUT_PATH/"$PREFIX"_phenotype_file.txt; done
+for i in $P1 $P2 $P3 $PO; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
+echo POP FILE READY
 
 #############################
 # 5 - fd in sliding windows #
 #############################
 python3 $SCRIPT/ABBABABAwindows.py \
--g  $OUTPUT_PATH/"$PREFIX".geno.gz \
+-g  $OUTPUT_PATH/$PREFIX/"$PREFIX".geno.gz \
 -f phased \
--o $OUTPUT_PATH/output.csv \
+-o $OUTPUT_PATH/$PREFIX/output.csv \
 --windType sites \
 -w $WINDOW -m 1 \
 -P1 $P1 -P2 $P2 -P3 $P3 -O $PO \
 -T 4 \
 --minData 0.2 \
---popsFile $OUTPUT_PATH/"$PREFIX"_phenotype_file.txt \
+--popsFile $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt \
 --writeFailedWindows
 
-cat $OUTPUT_PATH/output.csv | grep -v nan|perl -pe 's/,/\t/g' > $OUTPUT_PATH/Results_"$CHR"_"$START"_"$END"_"$P1"_"$P2"_"$P3"_"$PO".txt
+cat $OUTPUT_PATH/$PREFIX/output.csv | grep -v nan|perl -pe 's/,/\t/g' > $OUTPUT_PATH/$PREFIX/Results_"$CHR"_"$START"_"$END"_"$P1"_"$P2"_"$P3"_"$PO".txt
 
 #############################
 # 6 - Plotting ABBA and fd  #
 #############################
 PATH_PARENT_FOLDER=$(readlink -f ../)
-Rscript ./Statistics.R $PATH_PARENT_FOLDER  $PREFIX Results_"$CHR"_"$START"_"$END"_"$P1"_"$P2"_"$P3"_"$PO".txt $WINDOW $P1 $P2 $P3 $PO
+Rscript ./Statistics.R $OUTPUT_PATH/$PREFIX  $PREFIX Results_"$CHR"_"$START"_"$END"_"$P1"_"$P2"_"$P3"_"$PO".txt $WINDOW $P1 $P2 $P3 $PO
