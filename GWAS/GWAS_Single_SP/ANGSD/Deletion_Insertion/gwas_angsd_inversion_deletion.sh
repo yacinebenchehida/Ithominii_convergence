@@ -38,7 +38,7 @@ $ANGSD -b $WD/bam_list.txt -dobcf 1 -gl 2 -dopost 1 -domaf 2 -domajorminor 1 -do
 bcftools view $WD/GWAS_around_peak_menophilus.bcf|bcftools query -f '%POS  [ %GT]\n'] 
 
 ######## Create phenotype file
-cat $WD/menophilus_list.txt |while read line; do grep $line /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Inputs/Melinaea_menophilus/GEMMA_encoding_phenotype_Melinaea_menophilus.txt; done |awk '{print $3}'|perl -pe 's/3/1/g'|perl -pe 's/2/0/g'|perl -pe 's/-9/-999/g > $WD/phenotype_file.txt
+cat $WD/menophilus_list.txt |while read line; do grep $line /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Inputs/Melinaea_menophilus/GEMMA_encoding_phenotype_Melinaea_menophilus.txt; done |awk '{print $3}'|perl -pe 's/3/1/g'|perl -pe 's/2/0/g'|perl -pe 's/-9/-999/g' > $WD/phenotype_file.txt
 
 ######## Run angsd based GWAS
 $ANGSD -yQuant $WD/phenotype_file.txt -doAsso 2 -GL 2 -doPost 1 -out GWAS_around_peak_menophilus -doMajorMinor 1 -SNP_pval 0.7 -doMaf 1 -Pvalue 1 -ref $REF  -bam $WD/bam_list.txt 
