@@ -26,8 +26,12 @@ touch $WD/bam_list.txt
 cd $BAM_FOLDER
 cat $WD/menophilus_list.txt|while read line
 do
-	samtools view -b -o $WD/SUPER_18_"$line"_gap.bam $line/"$line"*.bam SUPER_18:14819397-15823591
-	readlink -f $WD/*$line*bam >> $WD/bam_list.txt
+        samtools view -b -o $WD/SUPER_18_"$line"_gap.bam $line/"$line"*.bam SUPER_18:14819397-15823591
+        readlink -f $WD/*$line*bam >> $WD/bam_list.txt
+        samtools sort $WD/SUPER_18_"$line"_gap.bam > $WD/SUPER_18_"$line"_sorted_gap.bam
+        rm $WD/SUPER_18_"$line"_gap.bam
+        samtools index $WD/SUPER_18_"$line"_sorted_gap.bam
+        rm $WD/SUPER_18_"$line"_gap.bam
 done
 
 ######## Call SNPs using angsd
