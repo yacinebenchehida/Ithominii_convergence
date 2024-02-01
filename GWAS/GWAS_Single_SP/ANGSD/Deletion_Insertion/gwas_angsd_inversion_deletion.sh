@@ -31,7 +31,6 @@ do
         samtools sort $WD/SUPER_18_"$line"_gap.bam > $WD/SUPER_18_"$line"_sorted_gap.bam
         rm $WD/SUPER_18_"$line"_gap.bam
         samtools index $WD/SUPER_18_"$line"_sorted_gap.bam
-        rm $WD/SUPER_18_"$line"_gap.bam
 done
 
 ######## Call SNPs using angsd
