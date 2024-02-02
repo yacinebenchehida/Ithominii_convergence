@@ -1,0 +1,1 @@
+gwas_angsd_inversion_deletion.sh
