@@ -20,7 +20,7 @@ do
 	do
 		id=$(echo $fasta|perl -pe 's/_'"$i"'.fa.gz//g')
 		python3 /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/ASTRAL/Scripts/Add_sample_id_to_header.py $fasta $i > "$id"_"$i".fas
-		zcat "$id"_"$i".fas >> "$i"_combined.fasta
+		cat "$id"_"$i".fas >> "$i"_combined.fasta
 		rm $fasta "$id"_"$i".fas
 	done
 	cd $RESULTS
