@@ -40,7 +40,7 @@ def has_high_n_percentage(window_seqs):
 	total_bases = sum(seq.count("N") for id, seq in window_seqs)  # Count the total number of 'N' bases in the window
 	total_length = sum(len(seq) for id, seq in window_seqs)  # Calculate the total length of the sequences in the window
 	n_percentage = total_bases / total_length  # Calculate the percentage of 'N' bases
-	return n_percentage > 0.5  # Return True if the percentage of 'N' bases is greater than 0.5, False otherwise
+	return n_percentage > 0.2  # Return True if the percentage of 'N' bases is greater than 0.5, False otherwise
 
 # Function to run RAxML on a window
 def run_raxml_on_window(window_file, output_dir, window_index):
@@ -49,7 +49,7 @@ def run_raxml_on_window(window_file, output_dir, window_index):
 		return  # Return if the window file does not exist
 
 	# Run RAxML on the window sequences
-	subprocess.run(["raxmlHPC", "-m", "GTRCAT", "-s", window_file, "-n", f"window_{window_index}", "-T", "4", "-p", "12345", "-w", os.path.abspath(output_dir), "-N", "10"])
+	subprocess.run(["raxmlHPC", "-m", "GTRCAT", "-s", window_file, "-n", f"window_{window_index}", "-p", "12345", "-T", "4", -w", os.path.abspath(output_dir)])
 
 	# Remove unnecessary files for this window
 	for file in os.listdir(output_dir):  # Iterate over files in the output directory
@@ -70,7 +70,7 @@ def main():
 	# Get input arguments
 	fasta_file = sys.argv[1]  # Get the input FASTA file
 	output_dir = sys.argv[2]  # Get the output directory
-	window_size = 1000  # Define the window size
+	window_size = 5000  # Define the window size
 
 	# Slice sequences into windows
 	windows = slice_sequences(fasta_file, window_size)
