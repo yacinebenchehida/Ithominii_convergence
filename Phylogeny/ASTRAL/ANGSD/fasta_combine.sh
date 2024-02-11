@@ -5,7 +5,6 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --account=BIOL-SPECGEN-2018
-#SBATCH --job-name=fasCmb
 #SBATCH --time=0-00:15:00
 
 module load Biopython/1.81-foss-2022b
