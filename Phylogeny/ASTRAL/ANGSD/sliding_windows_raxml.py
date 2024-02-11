@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys  # Importing the sys module for system-specific parameters and functions
 import os  # Importing the os module for operating system functionalities
