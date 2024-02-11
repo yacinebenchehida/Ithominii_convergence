@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --account=BIOL-SPECGEN-2018
 #SBATCH --job-name=bam2fas
-#SBATCH --time=0-02:00:00
-#SBATCH --array=1-5
+#SBATCH --time=0-01:00:00
+#SBATCH --array=1-40
 
 ##########################
 # load necessary modules #
@@ -38,7 +38,7 @@ BAM_FILE=$(readlink -f  $BAM/$SAMPLE/*bam )
 echo bam file is $BAM_FILE
 
 # Transform bam to fasta
-SCAFFOLD="scaffold_{22..24}"
+SCAFFOLD="scaffold_{1..25}"
 
 for scaffold in $(eval echo "$SCAFFOLD"); do
 	echo $scaffold
