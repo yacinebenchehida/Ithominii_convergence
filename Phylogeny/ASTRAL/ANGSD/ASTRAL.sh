@@ -16,5 +16,5 @@ module load Java/13.0.2
 ##############
 # Run ASTRAL #
 ##############
-java -Djava.library.path=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/ASTRAL/lib/ -jar  /mnt/scratch/projects/biol-specgen-2018/yacine/Tools/ASTRAL/astral.5.7.3.jar -i ../Results/curated_combined_phylogeny.txt -o ../Results/astral_results -t 2 2> ../Results/astral_results.log
-[
+java -Djava.library.path=/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/ASTRAL/lib/ -jar  /mnt/scratch/projects/biol-specgen-2018/yacine/Tools/ASTRAL/astral.5.7.3.jar -i ../Results/curated_combined_phylogeny.txt -o ../Results/astral_results -t 2 2> ../Results/astral_results.logy
+
