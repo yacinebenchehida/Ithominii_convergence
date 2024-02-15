@@ -43,17 +43,14 @@ running_jobs2=$(squeue|grep ybc502| grep CombFast| awk '{print $1}'|perl -pe 's/
 echo $(eval echo "$running_jobs2")
 sbatch --job-name=Sliding --dependency=aftercorr:$running_jobs2 ./run_sliding_windows_raxml.sh 
 
-############################################
-# Combine all the trees into a single file #
-############################################
-
 ##############
 # Run ASTRAL #
 ##############
 # Forcing monophyly of known species
-
 # Without forcing the monophyly
-
+running_jobs3=$(squeue|grep ybc502| grep Sliding| awk '{print $1}'|perl -pe 's/\n/,/g'|sed 's/,$//g')
+echo $(eval echo "$running_jobs3")
+sbatch --dependency=aftercorr:$running_jobs3 ./ASTRAL.sh
 
 ####################
 # Plot ASTRAL tree #
