@@ -16,6 +16,7 @@ module load Biopython/1.81-foss-2022b
 module load HTSlib/1.15.1-GCC-11.3.0
 module load Java/13.0.2
 module load RAxML/8.2.12-gompi-2021a-hybrid-avx2
+module load Armadillo/12.6.2-foss-2023a
 
 #########################
 # Get List of scaffolds #
@@ -36,22 +37,19 @@ echo $(eval echo "$running_jobs1")
 sbatch --job-name=CombFasta --dependency=aftercorr:$running_jobs1 ./fasta_combine.sh 
 
 ###############################################
-# Split fasta files into windows of 100000 kb and get the ML tree for each window
+# Split fasta files into windows of 100000 kb and get the ML tree for each window and root the trees
 ###############################################
 # Extract the running job numbers 
 running_jobs2=$(squeue|grep ybc502| grep CombFast| awk '{print $1}'|perl -pe 's/\n/,/g'|sed 's/,$//g')
 echo $(eval echo "$running_jobs2")
 sbatch --job-name=Sliding --dependency=aftercorr:$running_jobs2 ./run_sliding_windows_raxml.sh 
 
-##############
-# Run ASTRAL #
-##############
+######################################
+# Run ASTRAL and plot the final tree #
+######################################
 # Forcing monophyly of known species
+
 # Without forcing the monophyly
 running_jobs3=$(squeue|grep ybc502| grep Sliding| awk '{print $1}'|perl -pe 's/\n/,/g'|sed 's/,$//g')
 echo $(eval echo "$running_jobs3")
 sbatch --dependency=aftercorr:$running_jobs3 ./ASTRAL.sh
-
-####################
-# Plot ASTRAL tree #
-####################
