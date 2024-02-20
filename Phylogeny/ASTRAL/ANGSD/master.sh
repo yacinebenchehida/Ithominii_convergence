@@ -36,6 +36,11 @@ running_jobs1=$(squeue|grep ybc502| grep bam2fas| awk '{print $1}'|perl -pe 's/\
 echo $(eval echo "$running_jobs1")
 sbatch --job-name=CombFasta --dependency=aftercorr:$running_jobs1 ./fasta_combine.sh 
 
+####################################################
+# Create a file that will host all the phylogenies #
+####################################################
+touch ../Results/Combine_phylogeny.txt
+
 ###############################################
 # Split fasta files into windows of 100000 kb and get the ML tree for each window and root the trees
 ###############################################
