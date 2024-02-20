@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --account=BIOL-SPECGEN-2018
 #SBATCH --time=0-24:00:00
-#SBATCH --array=20-21
+#SBATCH --array=1-21
 
 #####################
 # Load used modules #
@@ -20,11 +20,6 @@ PXRR="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/phyx/src/pxrr"
 ######################################
 SCAFFOLD=$(cat /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/ASTRAL/Inputs/list_scaffold.txt| awk -v scaffold=${SLURM_ARRAY_TASK_ID} 'NR==scaffold')
 
-####################################################
-# Create a file that will host all the phylogenies #
-####################################################
-touch ../Results/Combine_phylogeny.txt
-
 #########################################################################
 # Split each scaffold into windows of 5 kb and run raxml on each window #
 #########################################################################
@@ -36,9 +31,3 @@ touch ../Results/Combine_phylogeny.txt
 cat ../Results/"$SCAFFOLD"/RAxML_bipartitionsBranchLabels* >> ../Results/Combine_phylogeny.txt
 cat ../Results/Combine_phylogeny.txt |perl -pe 's/scaffold_(\d+)_//g' >../Results/curated_combined_phylogeny.txt
 rm ../Results/Combine_phylogeny.txt
-
-######################################
-# Select the scaffold to be analysed #
-######################################
-$PXRR -t ../Results/curated_combined_phylogeny.txt -g  Sample_11-2002-3511,Sample_2-2002-1553 -o ../Results/rooted_curated_combined_phylogeny.txt
-rm ../Results/curated_combined_phylogeny.txt
