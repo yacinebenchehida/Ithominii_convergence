@@ -39,4 +39,4 @@ sbatch --array=1-$array_number ./shapeit.sh $1
 # Merge all phased vcf into a single file #
 ###########################################
 running_jobs1=$(squeue|grep ybc502| grep phase| awk '{print $1}'|perl -pe 's/\n/,/g'|sed 's/,$//g')
-sbatch --dependency=aftercorr:$running_jobs1 ./combine.sh 
+sbatch --dependency=aftercorr:$running_jobs1 ./combine.sh $array_number
