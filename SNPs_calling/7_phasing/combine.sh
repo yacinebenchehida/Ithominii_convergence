@@ -1,4 +1,5 @@
 #!/bin/bash
+# Author: Yacine Ben Chehida
 
 #SBATCH --time=03:00:00
 #SBATCH --nodes=1
@@ -16,9 +17,8 @@ INT_VCFS="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/9_Phasin
 #############################   
 # 2 - COMBINE VCF INTERVALS #
 ############################# 
-####SNPS####
 zcat $INT_VCFS/*intervals_1.*snps.phased.vcf.gz > $INT_VCFS/"$1".DP4_GQ5_QUAL5_F20.snps.phased.vcf
-for j in {2..28}; do echo interval "$j"; zcat $INT_VCFS/*intervals_"$j".*snps.phased.vcf.gz|grep -v '#' >> $INT_VCFS/"$1".DP4_GQ5_QUAL5_F20.snps.phased.vcf; done
+for j in $(seq 2 $1); do echo interval "$j"; zcat $INT_VCFS/*intervals_"$j".*snps.phased.vcf.gz|grep -v '#' >> $INT_VCFS/"$1".DP4_GQ5_QUAL5_F20.snps.phased.vcf; done
 
 #############################
 # 3 - COMPRESSED FINAL VCFS #
