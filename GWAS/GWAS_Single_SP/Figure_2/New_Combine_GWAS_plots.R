@@ -24,6 +24,7 @@ library("ggthemes")
 library("gggenes")
 library(patchwork)
 library(png)
+library(viridis)
 
 #################################
 # Define a few useful functions #
@@ -131,27 +132,29 @@ images = images[grepl(sp,images)]
 	# Combine manhattan plot and images
 	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) +                # Combine plot & image
 	inset_element(p = my_image,
-                left = LEFT - 0.15,
-                bottom = 0.85,
-                right = LEFT - 0.12,
-                top = 0.88) +
+                left = LEFT - 0.13,
+                bottom = 0.87,
+                right = LEFT - 0.10,
+                top = 0.90) +
 	inset_element(p = my_image2,
-                left = LEFT - 0.15,
-                bottom = 0.77,
-                right = LEFT - 0.12,
-                top = 0.80)
+                left = LEFT - 0.13,
+                bottom = 0.69,
+                right = LEFT - 0.10,
+                top = 0.72)
                 
     return(ggp_image)
 }
 
 # GWAS on zoom
-Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data){
+Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshold,sp){
 	colnames(region) = c("Species","Scaffold","Feature","From","To")
 	start_plot = min(unlist(region[,c(4,5)]))
 	end_plot = max(unlist(region[,c(4,5)]))
 	print(paste(start_plot, peak_position, end_plot, peak, sep = "\t"))
 	gwas_zoom = gwas_data[gwas_data$CHR==peak & gwas_data$BP > (start_plot-1) & gwas_data$BP < (end_plot+1),]
 	
+	if(sp!="Hypothyris_anastasia"){
+	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
         geom_point(color="gray") +
         scale_x_continuous() +
@@ -160,9 +163,27 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data){
         theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank()) +
 	theme(axis.title.x=element_blank()) +
 	theme(axis.title.y = element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank(),plot.margin=unit(c(0.8,1,-1.2,1), "cm")) +
-    geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8)
+	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") +
+	geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) 
     
-    return(p_zoom)
+	return(p_zoom)
+	}else{
+	gwas_zoom =  cbind(gwas_zoom[,c(1:2)],rev(gwas_zoom$BP),gwas_zoom[,c(4:6)])
+	colnames(gwas_zoom)[3] = c("BP")
+	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
+	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
+        geom_point(color="gray") +
+        scale_x_continuous() +
+        labs(x = "Genome position (kb)", y = "-log<sub>10</sub>(p)") +
+        theme_bw() +
+        theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank()) +
+        theme(axis.title.x=element_blank()) +
+        theme(axis.title.y = element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank(),plot.margin=unit(c(0.8,1,-1.2,1), "cm")) +
+        geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") +
+        geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8)
+
+        return(p_zoom)
+	}
 }
 
 # Plot genes syntheny
@@ -171,7 +192,7 @@ Plotting_syntheny <- function(region_genes){
 	dummies <- make_alignment_dummies(region_genes,aes(xmin = From, xmax = To, y = Species, id = Feature),on = region[1,2])
 	
 	# Set colors
-	my_colors = rainbow(length(unique(region_genes$Feature)))
+	my_colors = viridis(length(unique(region_genes$Feature)))
 	
 	# Plot syntheny based on genes only (no features plotted)
 	p_syntheny <- ggplot(region_genes, aes(xmin = From , xmax = To,y = Species, fill = Feature)) +
@@ -188,6 +209,30 @@ Plotting_syntheny <- function(region_genes){
 	return(p_syntheny)
 }
 
+# Plot genes syntheny with genes names above genes
+Plotting_syntheny_text <- function(region_genes,sp){
+	colnames(region_genes) = c("Species","Scaffold","Feature","From","To")
+	dummies <- make_alignment_dummies(region_genes,aes(xmin = From, xmax = To, y = Species, id = Feature),on = region_genes[1,3])
+	my_colors = viridis(length(unique(region_genes$Feature)))
+	region_genes$positions = (region_genes$To + region_genes$From)/2 
+
+	if(sp!="Hypothyris_anastasia"){
+	syntheny_text <-ggplot(region_genes, aes(xmin = From , xmax = To,y = Species, fill = Feature)) +
+	geom_gene_arrow(arrowhead_width = grid::unit(0, "mm") , arrowhead_height = grid::unit(0, "mm"))  +
+	scale_color_manual(values = c("black")) + scale_fill_manual(values = my_colors) + guides(fill = guide_legend(nrow = 2)) +
+	theme(legend.position="bottom",axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y=element_blank(), axis.text.y=element_blank()) + 
+	theme(panel.border = element_blank()) +
+	theme(panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "white"),panel.grid.major.x = element_blank(), panel.grid.major.y = element_line(colour="black"),
+        legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(-10,0,160,0), plot.margin=unit(c(-6,1,-0.5,1), "cm")) +
+	geom_text(aes(label = Feature, x = positions,  y = 0.925),angle = 20, hjust = 0.65, vjust = -1.5, size = 3) + guides(fill = FALSE) 
+	print("p_syntheny ready")
+	
+	return(syntheny_text)
+	}
+}
+
 # Plot syntheny based on gene and features
 Plotting_syntheny_with_features <- function(region){
 	region_genes = region[region$Feature!="stop_codon",]
@@ -200,7 +245,7 @@ Plotting_syntheny_with_features <- function(region){
 	geom_subgene_arrow(arrowhead_width = unit(1.5, "mm"),arrow_body_height= unit(4,"mm"),
 	data = region_genes,
 	aes(xmin = Start, xmax = End, xsubmin = From , xsubmax = To, fill = Feature,forward = orientation), alpha = region_genes$alpha) +
-	scale_fill_manual(values = c("grey","white")) +  guides(fill = guide_legend(nrow = 2), color = guide_legend(nrow = 2)) +
+	scale_fill_manual(values = c("grey","white")) +  guides(fill = guide_legend(nrow = 1), color = guide_legend(nrow = 1)) +
 	theme(legend.position="bottom",axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank(),axis.title.y=element_blank(), axis.text.y=element_blank()) +
     theme(panel.border = element_blank()) +
     theme(panel.grid.minor = element_blank(),
@@ -222,7 +267,7 @@ for (sp in dat){
 	gwas = read.table(paste("/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/",sp,".txt",sep=""),skip=1)
 	bonf_threshold = -log10(0.05/as.numeric(dim(gwas)[1]))
 	images = system("readlink -f /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/images/*", intern = TRUE)
-	annotation = read.table("/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/annotation_info/annotation.txt") 
+	annotation = read.table("/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/annotation_info/annotation.txt",sep="\t") 
 		
 	################          
 	# Prepare data #
@@ -260,13 +305,14 @@ for (sp in dat){
 	#########################
 	region = annotation[annotation$V1==sp,]
 	print(region)
-	p_zoom <- Plotting_gwas_zoom(region,peak_position,peak,gwas_data)
+	p_zoom <- Plotting_gwas_zoom(region,peak_position,peak,gwas_data,bonf_threshold,sp)
 	
 	############
         # Syntheny #
         ############
-	p_syntheny <- Plotting_syntheny(region)
-	
+	#p_syntheny <- Plotting_syntheny(region)
+	p_syntheny <- Plotting_syntheny_text(region,sp)
+
 	######################################	
 	# Plot syntheny and GWAS around peak #
 	######################################
@@ -289,6 +335,6 @@ for (sp in dat){
 ###########################################
 # Combine all the GWAS in a single figure #
 ###########################################
-png(file="Optix_GWAS.png",width=600,height=950,type="cairo")
+png(file="Cortex_GWAS.png",width=600,height=950,type="cairo")
 	wrap_plots(list, ncol = 1)
 dev.off()
