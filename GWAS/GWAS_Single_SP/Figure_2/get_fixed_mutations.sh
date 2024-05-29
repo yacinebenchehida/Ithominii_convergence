@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Load bcftools
 module load BCFtools/1.15.1-GCC-11.3.0
 
@@ -27,10 +29,9 @@ rm "$SPECIES"_tmp2.txt "$SPECIES"_jamaisdeuxsanstrois
 # Make genotype-phenotype input file for R
 > "$SPECIES"_genotype_phenotype_input.txt
 
-cat "$SPECIES"_genotype_top_SNPS.txt|while read line; 
-do
-		SNP=$(echo $line|awk '{print $1}')
-		paste <(for i in $(seq $NUMB_SAMPLES); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >> "$SPECIES"_genotype_phenotype_input.txt
+cat "$SPECIES"_genotype_top_SNPS.txt|while read line; do
+	SNP=$(echo $line|awk '{print $1}')
+	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >> "$SPECIES"_genotype_phenotype_input.txt
 done
 
 rm "$SPECIES"_genotype_top_SNPS.txt
