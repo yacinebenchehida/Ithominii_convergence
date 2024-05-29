@@ -183,21 +183,22 @@ Fixed_mutations <- function(gwas_data, bonf_threshold,peak,peak_position,VCF,gen
 		current_snp$geno <- gsub("10", "01", current_snp$geno)
 		current_snp <- current_snp[current_snp$geno!="..",]
   
-		if(fixed_mutations(current_snp)==TRUE){
+		if(assess_fixed_mutations(current_snp)==TRUE){
 			list[[a]] = cbind(i)
 			a = a + 1
 		}
 	
 	}
-	list_of_fixed_mutations <- as.data.frame(do.call(rbind,list))
-	print(list_of_fixed_mutations)
+	list_of_fixed_mutations <- do.call(rbind,list)
 	return(list_of_fixed_mutations)
 }
 
 
 # Function to create the manhattan plot for the whole genome
-Plotting_gwas <- function(gwas_data, sp, bonf_threshold, peak, peak_position, axis_set) {
-    p <- ggplot(gwas_data, aes(x = bp_cum/1000000, y = -log10(P),color =CHR)) +
+Plotting_gwas <- function(gwas_data, sp, bonf_threshold, peak, peak_position, axis_set,fixed_mutations) {
+	orange_points = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold & gwas_data$BP > (peak_position - 500000) & gwas_data$BP < (peak_position + 500000),]
+	red_points = orange_points[orange_points$BP %in% fixed_mutations,]
+	p <- ggplot(gwas_data, aes(x = bp_cum/1000000, y = -log10(P),color =CHR)) +
          geom_point() +
          scale_x_continuous() +
          scale_color_manual(values = rep(c("gray", "black"), unique(length(axis_set$CHR)))) +
@@ -212,8 +213,10 @@ Plotting_gwas <- function(gwas_data, sp, bonf_threshold, peak, peak_position, ax
 		axis.text.y = element_text(size = 14),
 		axis.text.x = element_text(size = 14)) +
          geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) + 
-         geom_point(data = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold & gwas_data$BP > (peak_position - 500000) & gwas_data$BP < (peak_position + 500000),], aes(x= bp_cum/1000000, y = -log10(P)),colour="orange")
-	orange_points = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold & gwas_data$BP > (peak_position - 500000) & gwas_data$BP < (peak_position + 500000),]
+         geom_point(data = orange_points, aes(x= bp_cum/1000000, y = -log10(P)),colour="orange") +
+	geom_point(data = red_points,  aes(x= bp_cum/1000000, y = -log10(P)),shape=21, color = "black",size = 2, fill="red")
+	
+	
 	print(paste("start peak"))
 	print(head(orange_points,n=1))
 	print(paste("end peak"))
@@ -314,7 +317,7 @@ add_scale_2_plot <- function(p,data,size){
 }
 
 # GWAS on zoom
-Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign){
+Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign,fixed_mutations){
 	colnames(region) = c("Species","Scaffold","Feature","From","To")
 	start_plot = min(unlist(region[,c(4,5)]))
 	end_plot = max(unlist(region[,c(4,5)]))
@@ -326,6 +329,11 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 
 	if(sign > 0){
 	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
+	print("paragon")
+	print(paragon)
+	print("red points")
+	red_points = paragon[paragon$BP %in% fixed_mutations,]
+	print(red_points)
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
         geom_point(color="gray") +
         scale_x_continuous() +
@@ -333,7 +341,8 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
         theme_bw() +
         theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(), axis.title.y = element_markdown(size=10), axis.text.y = element_text(size = 14)) +
 	theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
-	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") +
+	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") + 
+        geom_point(data = red_points,  aes(x= BP/1000, y = -log10(P)),shape=21, color = "black",size = 2, fill="red") +
 	geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) +
 	theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5)) 
 
@@ -349,6 +358,11 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 	gwas_zoom =  cbind(gwas_zoom[,c(1:2)],rev(gwas_zoom$BP),gwas_zoom[,c(4:6)])
 	colnames(gwas_zoom)[3] = c("BP")
 	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
+	print("paragon")
+        print(paragon)
+	red_points = paragon[paragon$BP %in% fixed_mutations,]
+	print("red points")
+	print(red_points)
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
         geom_point(color="gray") +
         scale_x_continuous() +
@@ -357,6 +371,7 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 	theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(), axis.title.y = element_markdown(size=10), axis.text.y = element_text(size = 14)) +
 	theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
 	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") +
+	geom_point(data = red_points,  aes(x= BP/1000, y = -log10(P)),shape=21, color = "black",size = 2, fill="red") +
         geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5))
 	
 	p_zoom <- add_scale_2_plot(p_zoom,gwas_zoom,20)
@@ -524,13 +539,13 @@ for (sp in especes){
         # Get fixed mutations #
         #######################
 	VCF=paste("/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/",sp, "/*vcf.gz",sep="")
-	Fixed_mutations(gwas_data, bonf_threshold,peak,peak_position,VCF,gene,sp)
+	fixed_mutations = Fixed_mutations(gwas_data, bonf_threshold,peak,peak_position,VCF,gene,sp)
 
 	####################
 	# Plot per species #
 	####################
 	# Manhattan plot
-	p <- Plotting_gwas(gwas_data,sp,bonf_threshold,peak,peak_position,ready_data$axis_set)
+	p <- Plotting_gwas(gwas_data,sp,bonf_threshold,peak,peak_position,ready_data$axis_set,fixed_mutations)
 
 	# Add butterflies images
 	ggp_image <- add_images(images,sp, p, gwas_data)
@@ -541,7 +556,7 @@ for (sp in especes){
 	region = annotation[annotation$V1==sp,]
 	print(region)	
 	sign = as.numeric(region[2,4]) - as.numeric(region[1,4])
-	p_zoom <- Plotting_gwas_zoom(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign)
+	p_zoom <- Plotting_gwas_zoom(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign,fixed_mutations)
 	print("p_zoom ready")
 
 	######################################
