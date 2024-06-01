@@ -107,8 +107,16 @@ find_peak <- function(gwas,gwas_data,gene,sp){
 		}else{
 		peak = as.character(gwas_data[gwas_data$P==min(unlist(gwas_data$P)),1])
 		peak_position = gwas_data[gwas_data$P==min(unlist(gwas_data$P)),3]
-		results <- list(peak = peak, peak_position = peak_position)
+		if(length(peak_position) > 1){
+			print("multiple top SNPs")
+			print(peak_position)
+			peak = peak[1]	
+			peak_position = peak_position[1]
+			print(peak)
+			print(peak_position)
+			}
 		print(paste("peak found ", peak, ": ", peak_position, sep=""))
+		results <- list(peak = peak, peak_position = peak_position)
 		return(results)
 		}
 	}else{
@@ -147,6 +155,7 @@ assess_fixed_mutations <- function(my_df){
     
     if (length(genotype1) < 3 & length(genotype2) < 3){
       if (!any(genotype1 %in% genotype2)){ # No overlap condition
+	print("there are fixed mutations youpi")
         return(TRUE)
       }else{
         return(FALSE)
@@ -163,8 +172,11 @@ Fixed_mutations <- function(gwas_data, bonf_threshold,peak,peak_position,VCF,gen
 	orange_points = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold & gwas_data$BP > (peak_position - 500000) & gwas_data$BP < (peak_position + 500000),]
 	write.table(orange_points$BP, file = paste(species,"_tmp.txt",sep=""), quote = FALSE, sep = " ", row.names = FALSE, col.names = TRUE)
 	start_peak <- head(orange_points,n=1)
+	print(start_peak)
 	end_peak <- tail(orange_points,n=1)
+	print(end_peak)
 	peak_interval <- list(start_peak = start_peak[,3], end_peak = end_peak[,3])
+	print(paste("peak_interval is: ", peak_interval, sep=""))
 	command <- paste("./get_fixed_mutations.sh",VCF,peak,peak_interval$start_peak,peak_interval$end_peak,gene,species,sep=" ")
 	system(command)
 	geno_pheno <- read.table(paste(sp,"_genotype_phenotype_input.txt",sep=""))
@@ -191,6 +203,7 @@ Fixed_mutations <- function(gwas_data, bonf_threshold,peak,peak_position,VCF,gen
 	}
 	list_of_fixed_mutations <- do.call(rbind,list)
 	return(list_of_fixed_mutations)
+	print(paste("the fixed mutations are: ",list_of_fixed_mutations,sep=""))
 }
 
 
@@ -242,7 +255,7 @@ images = images[grepl(sp,images)]
 
 	# Combine manhattan plot and images
 	if(dim(gwas_data)[1] > 1000000){
-	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5)) # + # Combine plot & image
+	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5))  + # Combine plot & image
 	inset_element(p = my_image,
                 left = LEFT - 0.07,
                 bottom = 0.87,
@@ -257,7 +270,7 @@ images = images[grepl(sp,images)]
 	return(ggp_image)
 	}else{
 	print("non jen e veux pas")
-	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5)) # + # Combine plot & image
+	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5)) + # Combine plot & image
         inset_element(p = my_image,
                left = LEFT + 0.1,
               bottom = 0.87,
@@ -332,7 +345,9 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 	print("paragon")
 	print(paragon)
 	print("red points")
-	red_points = paragon[paragon$BP %in% fixed_mutations,]
+	red_points = paragon
+	red_points$old_coordinate = as.numeric(sub(".*:", "", red_points$SNP))
+	red_points = red_points[red_points$old_coordinate %in% fixed_mutations,]
 	print(red_points)
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
         geom_point(color="gray") +
@@ -360,7 +375,9 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
 	print("paragon")
         print(paragon)
-	red_points = paragon[paragon$BP %in% fixed_mutations,]
+	red_points = paragon
+        red_points$old_coordinate = as.numeric(sub(".*:", "", red_points$SNP))
+        red_points = red_points[red_points$old_coordinate %in% fixed_mutations,]
 	print("red points")
 	print(red_points)
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
@@ -539,7 +556,9 @@ for (sp in especes){
         # Get fixed mutations #
         #######################
 	VCF=paste("/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/",sp, "/*vcf.gz",sep="")
+	#VCF=paste("/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/9_Phasing/Results/",sp, "/*vcf.gz",sep="")
 	fixed_mutations = Fixed_mutations(gwas_data, bonf_threshold,peak,peak_position,VCF,gene,sp)
+	print(fixed_mutations)
 
 	####################
 	# Plot per species #
