@@ -1,5 +1,5 @@
 #! /usr/bin/perl -w
-#Script written by Prof. Kachon Dasmahapatra
+#Author: Prof. Kachon Dasmahapatra
 use strict;
 use warnings;
 
