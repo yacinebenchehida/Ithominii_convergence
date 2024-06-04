@@ -1,4 +1,4 @@
-# Mapping, SNPs calling and phasing: 
+# Mapping, SNP calling and phasing: 
 
 This folder contains all the scripts used to perform all the step from the initial mapping of the raw reads to the phasing of the final VCF.
 
@@ -65,7 +65,7 @@ qualimap bamqc --java-mem-size=20G \
 -outformat HTML 
 ```
 
-## 2) SNPs calling
+## 2) SNP calling
 The SNP calling was performed in several steps:
 
 ### Generate GVCF
