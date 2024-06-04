@@ -66,8 +66,10 @@ qualimap bamqc --java-mem-size=20G \
 ```
 
 ## 2) SNPs calling
+The SNP calling was performed in several steps:
+
 ### Generate GVCF
-- The folder 2_gvc contains the scripts that were used to obtain the GVCFs using GATK HaplotypeCaller. For the sake of speed, the script was applied to each genome and each genome interval.
+The folder 2_gvcf contains the scripts that were used to obtain the GVCFs using GATK HaplotypeCaller. For the sake of speed, the script was applied to each genome and each genome interval.
 
 ``` bash
 gatk --java-options "-Xmx4g" HaplotypeCaller \
@@ -80,13 +82,49 @@ gatk --java-options "-Xmx4g" HaplotypeCaller \
 --dont-use-soft-clipped-bases 
 ```
   
+### Combine GVCFs
+The folder 3_Combined_gvcf contains the scripts used to merge GVCFs of all samples of one species. We used the CombineGVCFs option of GATK for that end. For the sake of speed, the script was applied to each species and each genome interval.
 
-
-## Example usage
-### Run the full pipeline
 ``` bash
-library(SAMPLE)
-data("coral_symbionts")
-set.seed(812)
-SAMPLE(input = coral_symbionts, output_N = "Example", replicates = 50, stability_thresh = 2, sucess_points = 10, diff = 1)
+gatk --java-options -Xmx15g CombineGVCFs \
+-R $ref_genome \
+$variants \
+-O intervals_merged_${SLURM_ARRAY_TASK_ID} \
+-intervals $intervals
 ```
+
+### Genotype the GVCFs
+The folder 4_Genotype_gvcfs contains the scripts necessary to genotype the GVCFs and generate raw VCFs. It uses GenotypeGVCFs option of GATK. For the sake of speed, the script was applied to each species and each genome interval.
+
+``` bash
+gatk --java-options -Xmx15g GenotypeGVCFs \
+-R $ref_genome \
+-V intervals_merged_${SLURM_ARRAY_TASK_ID} \
+-O genotypeGVCF.intervals_${SLURM_ARRAY_TASK_ID}.vcf.gz
+-intervals $intervals
+```
+### Filter VCFs
+The VCFs were further filtered using BCFtools. More precisely BCFtools was used to keep bi-allelic SNPs with a variant quality score of at least 10, a genotype quality of at least 10, a depth of coverage of at least 5 and to exclude any SNPs with more than 20% of missing data.
+
+``` bash
+bcftools filter -e 'FORMAT/DP < 1 |FORMAT/GQ < 5 |QUAL <= 5' --set-GTs . genotypeGVCF.intervals_${SLURM_ARRAY_TASK_ID}.vcf.gz -O u | bcftools view -U -i 'TYPE=="snp"' -m2 -M2 -v snps -O v| bcftools view -i 'F_MISSING < 0.2'> genotypeGVCF.intervals_${SLURM_ARRAY_TASK_ID}.filters.snps.vcf
+```
+### Combining all VCF intervals in a single VCF
+We combined all 60 intervals to generate a single VCF for each species. Each VCF was also zipped (bgzip) and tabulated (tabix). 
+
+``` bash
+cat *intervals_0.* > snps.vcf
+for j in {1..59}; do cat *intervals_"$j".*|grep -v '#' >> snps.vcf; done
+bgzip -@ 12 snps.vcf && tabix -p vcf snps.vcf.gz
+```
+
+## 3) Phasing and missing data imputation
+The phasing and the data imputation were done using ShapeIT with default option. Shape it was applied to each scaffold/chromosome separately. Each phased VCF was also zipped (bgzip) and tabulated (tabix). 
+
+``` bash
+SCAFFOLD=$(sed -n "${SLURM_ARRAY_TASK_ID}"p list_of_scaffolds.txt)
+$SHAPEIT --input snps.vcf.gz --region $SCAFFOLD --output phased.snps.vcf
+bgzip phased.snps.vcf && tabix -p vcf phased.snps.vcf.gz
+```
+
+
