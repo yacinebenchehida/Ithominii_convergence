@@ -4,7 +4,7 @@ This folder contains all the scripts used to perform all the step from the initi
 
 ## 0) Preparing the reference genomes for mapping and snp calling
 
-Before use, fasta reference genome were:
+Before use, (fasta) reference genomes were:
 - Indexed for bwa:
 ``` bash
 bwa index $ref_genome
