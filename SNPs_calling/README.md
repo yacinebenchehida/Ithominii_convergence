@@ -4,7 +4,7 @@ This folder contains all the scripts used to perform all the step from the initi
 
 ## 1) Mapping
 
-- The folder 1_mapping contains the script that were used to map the reads to the reference genome using bwa mem, transform the sam into a bam file and then sort the reads in the bam file:
+- The folder 1_mapping contains the scripts that were used to map the reads to the reference genome using bwa mem, transform the sam into a bam file and then sort the reads in the bam file:
 
 ``` bash
 bwa mem -t 12 $ref_genome R1.fastq.gz R2.fastq.gz | samtools view -bSh |samtools sort -o sorted.bam
@@ -35,12 +35,32 @@ O=sorted_dedup.bam \
 M=marked_dedup_metrics.txt
 ```
 
+- Finally Qualimap was used to summarize and inspect the quality of the mapping
+``` bash
+qualimap bamqc --java-mem-size=20G \
+-bam sorted_dedup.bam \
+-c \
+-gd HUMAN \
+-nt 12 \
+-outformat HTML 
+```
 
-## 2) 
+## 2) SNPs calling
+### Generate GVCF
+- The folder 2_gvc contains the scripts that were used to obtain the GVCFs using GATK HaplotypeCaller. For the sake of speed, the script was applied to each genome and each genome interval.
 
--   R (\>= 4.3.0)
+``` bash
+gatk --java-options "-Xmx4g" HaplotypeCaller \
+-R $ref_genome \
+-I sorted_dedup.bam \
+-O ${SLURM_ARRAY_TASK_ID}.g.vcf.gz \
+--intervals $intervals \
+--output-mode EMIT_ALL_CONFIDENT_SITES \
+-ERC GVCF \
+--dont-use-soft-clipped-bases 
+```
+  
 
-SAMPLES requires: `ggplot2`, `dplyr`, `Rmisc`,`RColorBrewer`, `magrittr`.
 
 ## Example usage
 ### Run the full pipeline
