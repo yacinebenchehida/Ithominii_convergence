@@ -2,6 +2,26 @@
 
 This folder contains all the scripts used to perform all the step from the initial mapping of the raw reads to the phasing of the final VCF.
 
+## 0) Preparing the reference genomes for mapping and snp calling
+
+Before use, fasta reference genome were:
+- Indexed for bwa:
+``` bash
+bwa index $ref_genome
+```
+- Indexed for samtools ("faidxed")
+``` bash
+samtools faidx $ref_genome
+```
+- Created a GATK dictionary 
+``` bash
+gatk CreateSequenceDictionary -R $ref_genome
+```
+- Split into 60 intervals to speed up downstream analyses
+``` bash
+gatk SplitIntervals -R $ref_genome --scatter-count 60 -O 
+```
+
 ## 1) Mapping
 
 - The folder 1_mapping contains the scripts that were used to map the reads to the reference genome using bwa mem, transform the sam into a bam file and then sort the reads in the bam file:
