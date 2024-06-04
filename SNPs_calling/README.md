@@ -4,12 +4,39 @@ This folder contains all the scripts used to perform all the step from the initi
 
 ## 1) Mapping
 
+- The folder 1_mapping contains the script that were used to map the reads to the reference genome using bwa mem, transform the sam into a bam file and then sort the reads in the bam file:
+
 ``` bash
-library("devtools")
-devtools::install_github("yacinebenchehida/SAMPLE")
+bwa mem -t 12 $ref_genome R1.fastq.gz R2.fastq.gz | samtools view -bSh |samtools sort -o sorted.bam
 ```
 
-## Dependencies
+- Then the Picard was used to add reads groups and mark duplicates
+
+``` bash
+# Mark read groups
+java -jar -Xmx50g $EBROOTPICARD/picard.jar AddOrReplaceReadGroups \
+ I=$path_results/0_sorted_bam/$1/"$1"_sorted.bam \
+ O=$path_results/0_sorted_bam/$1/"$1"_sorted_RG.bam \
+ RGID=$RGID \
+ RGLB=$RGLB \
+ RGPL=$RGPL \
+ RGPU=$RGPU \
+ RGSM=$RGSM \
+ SORT_ORDER=coordinate \
+ CREATE_INDEX=TRUE
+
+# Mark duplicates
+java -jar $EBROOTPICARD/picard.jar MarkDuplicates \
+REMOVE_DUPLICATES=TRUE \
+OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \
+VALIDATION_STRINGENCY=SILENT \
+I=sorted_RG.bam \
+O=sorted_dedup.bam \
+M=marked_dedup_metrics.txt
+```
+
+
+## 2) 
 
 -   R (\>= 4.3.0)
 
