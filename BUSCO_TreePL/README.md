@@ -56,21 +56,21 @@ for i in *faa; do
 done
 ```
 
-### Generate GVCF
-The folder 2_gvcf contains the scripts that were used to obtain the GVCFs using GATK HaplotypeCaller. For the sake of speed, the script was applied to each genome and each genome interval.
+## 4) Remove aligned genes with an excessive number of "-"
+We excluded poorly aligned genes (i.e. genes with too many "-" in the alignment) by keeping only genes with at most 5% of "-". We used the indels_count.py script to count the number "-" in the alignement. indels_count.py relies on Biopython. The command below was used to remove aligments with too many "-":
 
 ``` bash
-gatk --java-options "-Xmx4g" HaplotypeCaller \
--R $ref_genome \
--I sorted_dedup.bam \
--O ${SLURM_ARRAY_TASK_ID}.g.vcf.gz \
---intervals $intervals \
---output-mode EMIT_ALL_CONFIDENT_SITES \
--ERC GVCF \
---dont-use-soft-clipped-bases 
+cd ../aligned_concatanated_genes_nucl
+
+for i in *fna; do 
+	INDELS=$(python -W ignore $SCRIPT/indels_count.py ../aligned_concatanated_genes_nucl/$i); 
+	if [[ "$INDELS" -gt 5 ]]; then 
+		echo $i; echo $INDELS; rm ../aligned_concatanated_genes_nucl/$i; 
+	fi; 
+done
 ```
   
-### Combine GVCFs
+## 5) Replace fasta headers so they are all the same
 The folder 3_Combined_gvcf contains the scripts used to merge GVCFs of all samples of one species. We used the CombineGVCFs option of GATK for that end. For the sake of speed, the script was applied to each species and each genome interval.
 
 ``` bash
@@ -81,7 +81,7 @@ $variants \
 -intervals $intervals
 ```
 
-### Genotype the GVCFs
+### 6) Concatenate all the genes in a single fasta file
 The folder 4_Genotype_gvcfs contains the scripts necessary to genotype the GVCFs and generate raw VCFs. It uses GenotypeGVCFs option of GATK. For the sake of speed, the script was applied to each species and each genome interval.
 
 ``` bash
