@@ -142,7 +142,8 @@ for i in 100_trees/*; do mv $i $i.tre; done
 
 ## 11) Running TreePL
 
-Divergence time estimates were obtained using a penalized-likelihood based approach implemented in TreePL (script submit_treepl.sh).
+Divergence time estimates were obtained using a penalized-likelihood based approach implemented in TreePL (script submit_treepl.sh). The node separating Papilionidae from the macromoths was used as a calibration node, constraining it to range from 100 to 120 Mya.
+
 The script consist in 3 steps:
 
 - 1) A priming step erformed on each of the 100 bootstrap trees
@@ -172,7 +173,7 @@ for i in {1..100}; do python3 ./run_treepl3.py ../Results/100_trees $i ../Result
 
 ## 12) Summarise the divergence time estimates using treeAnnotator
 
-We used the TreeAnnotator utilities from the Beast package to calculated the 95% highest posterior density for the node ages using a burnin of 10%. 
+We used the TreeAnnotator utilities from the Beast package to calculate the 95% highest posterior density for the node ages using a burnin of 10%. 
 
 ```
 cd ../Results/step3_output
@@ -180,4 +181,7 @@ cat *.tre > treeall_dated.tre
 treeannotator -burnin 10 treeall_dated.tre out.txt
 ```
 
-## 13) Plotting the results with 
+## 13) Plotting the chronogram
+
+The final chronogram was plotted using the script Divergence_time_plot_treepl.R relying on the R packages phytools, strap, and phyloch. 
+
