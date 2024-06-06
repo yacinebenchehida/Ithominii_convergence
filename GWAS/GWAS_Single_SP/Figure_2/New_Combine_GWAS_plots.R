@@ -100,6 +100,12 @@ find_peak <- function(gwas,gwas_data,gene,sp){
 			peak="SUPER_5"
 			peak_position = gwas_data[gwas_data$CHR==peak,]
                         peak_position=gwas_data[gwas_data$P==min(unlist(gwas_data$P)),3]
+			if(length(peak_position) > 1){
+				print("multiple top SNPs")
+				print(peak_position)
+				peak = peak[1]
+				peak_position = peak_position[1]
+                        }
 			print(peak_position)
 			results <- list(peak = peak, peak_position = peak_position)
                         print(paste("peak found ", peak, ": ", peak_position, sep=""))
@@ -193,9 +199,10 @@ Fixed_mutations <- function(gwas_data, bonf_threshold,peak,peak_position,VCF,gen
 		current_snp <- current_snp[current_snp$pheno!=-9,]
 		current_snp$geno <- gsub("/|\\|", "", current_snp$geno)
 		current_snp$geno <- gsub("10", "01", current_snp$geno)
+		pct_missing <- 100*(dim(current_snp[current_snp$geno=="..",])[1]/dim(current_snp[current_snp$geno!="..",])[1])
 		current_snp <- current_snp[current_snp$geno!="..",]
   
-		if(assess_fixed_mutations(current_snp)==TRUE){
+		if(assess_fixed_mutations(current_snp)==TRUE && (pct_missing < 10)){
 			list[[a]] = cbind(i)
 			a = a + 1
 		}
@@ -206,11 +213,47 @@ Fixed_mutations <- function(gwas_data, bonf_threshold,peak,peak_position,VCF,gen
 	print(paste("the fixed mutations are: ",list_of_fixed_mutations,sep=""))
 }
 
+# Function to assess if the Spearman and Cramer's V coefficient for each SNPs above the threshold of significance
+Spear_Cram <- function(sp){ 
+        geno_pheno <- read.table(paste(sp,"_genotype_phenotype_input.txt",sep=""))
+	colnames(geno_pheno) <- c("SNP","SAMPLE","pheno","geno")
+	list = list()
+        a = 1
+	
+        for (i in unique(geno_pheno$SNP)){
+                current_snp <- geno_pheno[geno_pheno$SNP==i,]
+                current_snp <- current_snp[current_snp$pheno!=-9,]
+                current_snp$geno <- gsub("/|\\|", "", current_snp$geno)
+                current_snp$geno <- gsub("10", "01", current_snp$geno)
+                current_snp <- current_snp[current_snp$geno!="..",]
+		current_snp$GenotypeNumeric <- as.numeric(factor(current_snp$geno, levels = c("00", "01", "11")))
+		print(current_snp$GenotypeNumeric)
+		print(current_snp$pheno)
+		
+		#Spearman 
+		Spearman <- cor(current_snp$GenotypeNumeric, as.numeric(current_snp$pheno), method = "spearman")
+		
+		# Cramer's V
+		contingency_table <- table(current_snp$geno, current_snp$pheno)
+		chi2_result <- chisq.test(contingency_table)
+		cramers_v <- sqrt(chi2_result$statistic / (sum(contingency_table) * (min(nrow(contingency_table), ncol(contingency_table)) - 1)))
+		list[[a]] = c(i, Spearman^2, cramers_v)
+		a = a + 1
+	}
+	association <- do.call(rbind,list)
+	colnames(association) <- c("Outliers","Spearman","CramerV")
+	print(association)
+	return(association)
+}
 
 # Function to create the manhattan plot for the whole genome
-Plotting_gwas <- function(gwas_data, sp, bonf_threshold, peak, peak_position, axis_set,fixed_mutations) {
+Plotting_gwas <- function(gwas_data, sp, bonf_threshold, peak, peak_position, axis_set,fixed_mutations,association) {
 	orange_points = gwas_data[gwas_data$CHR==peak & -log10(gwas_data$P) > bonf_threshold & gwas_data$BP > (peak_position - 500000) & gwas_data$BP < (peak_position + 500000),]
 	red_points = orange_points[orange_points$BP %in% fixed_mutations,]
+	red_points <- red_points[order(red_points$P), ]
+	num_rows <- ceiling(0.3 * nrow(red_points))
+	red_points <- red_points[1:num_rows, ]
+	
 	p <- ggplot(gwas_data, aes(x = bp_cum/1000000, y = -log10(P),color =CHR)) +
          geom_point() +
          scale_x_continuous() +
@@ -227,7 +270,7 @@ Plotting_gwas <- function(gwas_data, sp, bonf_threshold, peak, peak_position, ax
 		axis.text.x = element_text(size = 14)) +
          geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) + 
          geom_point(data = orange_points, aes(x= bp_cum/1000000, y = -log10(P)),colour="orange") +
-	geom_point(data = red_points,  aes(x= bp_cum/1000000, y = -log10(P)),shape=21, color = "black",size = 2, fill="red")
+	geom_point(data = red_points,  aes(x= bp_cum/1000000, y = -log10(P)),shape=21, color = "black",size = 3, fill="red")
 	
 	
 	print(paste("start peak"))
@@ -257,14 +300,14 @@ images = images[grepl(sp,images)]
 	if(dim(gwas_data)[1] > 1000000){
 	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5))  + # Combine plot & image
 	inset_element(p = my_image,
-                left = LEFT - 0.07,
+                left = LEFT + 0.12,
                 bottom = 0.87,
-                right = LEFT - 0.04,
+                right = LEFT + 0.15,
                 top = 0.90) +
 	inset_element(p = my_image2,
-                left = LEFT - 0.07,
+                left = LEFT + 0.12,
                 bottom = 0.69,
-                right = LEFT - 0.04,
+                right = LEFT + 0.15,
                 top = 0.72)
                 
 	return(ggp_image)
@@ -272,14 +315,14 @@ images = images[grepl(sp,images)]
 	print("non jen e veux pas")
 	ggp_image <- p + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5)) + # Combine plot & image
         inset_element(p = my_image,
-               left = LEFT + 0.1,
+               left = LEFT + 0.26,
               bottom = 0.87,
-                right = LEFT + 13 ,
+                right = LEFT + 29 ,
                 top = 0.90) +
         inset_element(p = my_image2,
-                left = LEFT + 0.10 ,
+                left = LEFT + 0.26 ,
                 bottom = 0.69,
-                right = LEFT  + 0.13,
+                right = LEFT  + 0.29,
                 top = 0.72)
 
         return(ggp_image)
@@ -313,7 +356,7 @@ add_scale_2_plot <- function(p,data,size){
   difference <- (max(data$BP)-min(data$BP))*0.15
   x_position <- (min(data$BP) + difference)/1000
   print(paste("scale bar position is: ", x_position,sep = ""))
-  y_position <- max(-log10(data$P))*0.93
+  y_position <- max(-log10(data$P))*0.97
 
   # Add scale bar
   scale_bar <- annotate("segment", x = x_position - scale_bar_length, xend = x_position,
@@ -330,7 +373,7 @@ add_scale_2_plot <- function(p,data,size){
 }
 
 # GWAS on zoom
-Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign,fixed_mutations){
+Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign,fixed_mutations,association){
 	colnames(region) = c("Species","Scaffold","Feature","From","To")
 	start_plot = min(unlist(region[,c(4,5)]))
 	end_plot = max(unlist(region[,c(4,5)]))
@@ -342,12 +385,16 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 
 	if(sign > 0){
 	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
-	print("paragon")
+	paragon$Outliers = as.numeric(sub(".*:", "", paragon$SNP))
+	paragon = merge(paragon,association)
 	print(paragon)
 	print("red points")
 	red_points = paragon
 	red_points$old_coordinate = as.numeric(sub(".*:", "", red_points$SNP))
 	red_points = red_points[red_points$old_coordinate %in% fixed_mutations,]
+	red_points <- red_points[order(red_points$P), ]
+        num_rows <- ceiling(0.3 * nrow(red_points))
+        red_points <- red_points[1:num_rows, ]
 	print(red_points)
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
         geom_point(color="gray") +
@@ -356,14 +403,14 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
         theme_bw() +
         theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(), axis.title.y = element_markdown(size=10), axis.text.y = element_text(size = 14)) +
 	theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
-	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") + 
-        geom_point(data = red_points,  aes(x= BP/1000, y = -log10(P)),shape=21, color = "black",size = 2, fill="red") +
+	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P),colour=Spearman)) + scale_color_gradientn(colors = c("blue", "cyan","yellow", "orange","red","black"),limits = c(0, 1)) + 
+        geom_point(data = red_points,  aes(x= BP/1000, y = -log10(P)),shape=21, color = "black",size = 3, fill="red") +
 	geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) +
 	theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5)) 
 
 	print((min(gwas_zoom$BP) + (max(gwas_zoom$BP) - min(gwas_zoom$BP))*0.90)/1000)
 	
-	#p_zoom <- add_scale_2_plot(p_zoom,gwas_zoom,20)
+	p_zoom <- add_scale_2_plot(p_zoom,gwas_zoom,20)
 
 	#p_zoom <- p_zoom + draw_label(formatted_sp, color = "black", size = 14, angle = 0,x=(min(gwas_zoom$BP) + (max(gwas_zoom$BP) - min(gwas_zoom$BP))*0.88)/1000,y=max(-log10(gwas_zoom$P))*0.92)
 	
@@ -374,10 +421,15 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
 	colnames(gwas_zoom)[3] = c("BP")
 	paragon = gwas_zoom[-log10(gwas_zoom$P) > bonf_threshold,]
 	print("paragon")
-        print(paragon)
+	paragon$Outliers = as.numeric(sub(".*:", "", paragon$SNP))
+	paragon <- merge(paragon,association)
+	print(paragon)
 	red_points = paragon
         red_points$old_coordinate = as.numeric(sub(".*:", "", red_points$SNP))
         red_points = red_points[red_points$old_coordinate %in% fixed_mutations,]
+	red_points <- red_points[order(red_points$P), ]
+        num_rows <- ceiling(0.3 * nrow(red_points))
+        red_points <- red_points[1:num_rows, ]
 	print("red points")
 	print(red_points)
 	p_zoom <- ggplot(gwas_zoom, aes(x = BP/1000, y = -log10(P))) +
@@ -387,8 +439,8 @@ Plotting_gwas_zoom <- function(region,peak_position,peak,gwas_data,bonf_threshol
         theme_bw() +
 	theme(legend.position = "none",panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(), axis.title.y = element_markdown(size=10), axis.text.y = element_text(size = 14)) +
 	theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
-	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P)),colour="orange") +
-	geom_point(data = red_points,  aes(x= BP/1000, y = -log10(P)),shape=21, color = "black",size = 2, fill="red") +
+	geom_point(data = paragon, aes(x= BP/1000, y = -log10(P),colour=Spearman)) + scale_color_gradientn(colors = c("blue", "cyan","yellow", "orange","red","black"),limits = c(0, 1)) +
+	geom_point(data = red_points,  aes(x= BP/1000, y = -log10(P)),shape=21, color = "black",size = 3, fill="red") +
         geom_hline(yintercept=bonf_threshold, linetype="dashed", color = "orange", size=0.8) + theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.background=element_rect(colour="black", size = 1.5))
 	
 	p_zoom <- add_scale_2_plot(p_zoom,gwas_zoom,20)
@@ -559,6 +611,7 @@ for (sp in especes){
 	#VCF=paste("/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/9_Phasing/Results/",sp, "/*vcf.gz",sep="")
 	fixed_mutations = Fixed_mutations(gwas_data, bonf_threshold,peak,peak_position,VCF,gene,sp)
 	print(fixed_mutations)
+	association <- Spear_Cram(sp)
 
 	####################
 	# Plot per species #
@@ -575,7 +628,7 @@ for (sp in especes){
 	region = annotation[annotation$V1==sp,]
 	print(region)	
 	sign = as.numeric(region[2,4]) - as.numeric(region[1,4])
-	p_zoom <- Plotting_gwas_zoom(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign,fixed_mutations)
+	p_zoom <- Plotting_gwas_zoom(region,peak_position,peak,gwas_data,bonf_threshold,sp,sign,fixed_mutations,association)
 	print("p_zoom ready")
 
 	######################################
@@ -619,20 +672,9 @@ for (sp in especes){
 ###########################################
 # Combine all the GWAS in a single figure #
 ###########################################
-#if(gene=="Cortex"){
-#	png(file="Cortex_GWAS.png",width=700,height=450,type="cairo")
-#		plot(wrap_plots(list, ncol = 1))
-#	dev.off()
-#}
-
-#if(gene=="Optix"){
-#	png(file="Optix_GWAS.png",width=700,height=1300,type="cairo")
-#		plot(wrap_plots(list, ncol = 1))
-#	dev.off()
-#}
-
+output_name = paste(gene,"_",sp,"_GWAS.png",sep="")
 ggsave(
-  "Cortex_GWAS.png",
+  output_name,
   plot(wrap_plots(list, ncol = 1)),
   width = 7,
   height = 5,
