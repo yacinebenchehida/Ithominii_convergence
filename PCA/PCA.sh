@@ -33,10 +33,9 @@ $PLINK --vcf $VCF --double-id --allow-extra-chr --set-missing-var-ids @:# --inde
 # 4 - PERFORM THE PCA #
 #######################
 # LD prunning
-#$PLINK --vcf $VCF --double-id --allow-extra-chr --set-missing-var-ids @:# --pca --extract $RESULTS/$1/*prune.in --out $RESULTS/$1/$1 --geno 0
-$PLINK --vcf $VCF --double-id --allow-extra-chr --set-missing-var-ids @:# --pca --extract $RESULTS/$1/*prune.in --out $RESULTS/$1/$1 --geno 0 --remove samples_to_exclude.txt
+$PLINK --vcf $VCF --double-id --allow-extra-chr --set-missing-var-ids @:# --pca --extract $RESULTS/$1/*prune.in --out $RESULTS/$1/$1 --geno 0
 # No LD pruning
-#$PLINK --vcf $VCF --double-id --allow-extra-chr --set-missing-var-ids @:# --pca --out $RESULTS/$1/$1 -geno 0.2
+$PLINK --vcf $VCF --double-id --allow-extra-chr --set-missing-var-ids @:# --pca --out $RESULTS/$1/$1 -geno 0
 
 ####################################
 # 5 - ERASE BIG INTERMEDIATE FILES #
