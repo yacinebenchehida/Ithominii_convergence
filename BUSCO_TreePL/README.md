@@ -82,14 +82,14 @@ for j in *.fna; do
 done
 ```
 
-### 6) Concatenate all the genes in a single fasta file
+## 6) Concatenate all the genes in a single fasta file
 We concatenated all the  gene sequence aligments in a single superaligment fasta file. This step rely on the softwawre SeqKit.
 
 ``` bash
 $SEQKIT concat *.fna  > ../final.fna
 ```
 
-### 7)Maximum Likelihood tree of the busco genes
+## 7)Maximum Likelihood tree of the busco genes
 
 - The relationship between the busco genes was inferred using RAxML v8 using the GTRGAMMAI substitution model (RaxML.sh). 
 ``` bash
@@ -102,13 +102,15 @@ $RAXML -s final.fna -m GTRGAMMAI -n BUSCO_PHYLO -p 1234
 sed -r 's/[0-9:.]//g' input.tre > output_topo.tre
 ```
 
-### 8) Get bootstrap alignments
+NB: Steps 8 to 13 are largely inspired by this: [GitHub Pages](https://github.com/sunray1/treepl/tree/master)
+
+## 8) Get bootstrap alignments
 The following command was used to bootstrap the alignment fasta file (final.fna). We generated 100 bootstrap alignments using the option -f j in RAxML.
 ``` bash
 $RAXML -f j -m GTRGAMMAI -s final.fna -n BS -# 100 -b $RANDOM
 ```
 
-### 9) Getting a tree for each bootstrapped alignment
+## 9) Getting a tree for each bootstrapped alignment
 
 - We optimized the model parameters and branch lengths of the bootstrapped alignments while constraining the topology to match the previously inferred ML tree (step 7) using the -f e option in RAxML.
 
@@ -124,22 +126,32 @@ done
 cat RAxML_result.BS* > RAxML_bootstrap.bootstrap_all.tre
 ```
 
-### Combining all VCF intervals in a single VCF
-We combined all 60 intervals to generate a single VCF for each species. Each VCF was also zipped (bgzip) and tabulated (tabix). 
+## 10) Root the bootstrap trees 
+- We rooted all the bootstrap trees using Plutella xylostella as an outgroup with the program phyx. 
 
 ``` bash
-cat *intervals_0.* > snps.vcf
-for j in {1..59}; do cat *intervals_"$j".*|grep -v '#' >> snps.vcf; done
-bgzip -@ 12 snps.vcf && tabix -p vcf snps.vcf.gz
+/shared/biology/bioldata1/bl-kd684/yacine/Conv_Evol/Tools/phyx/src -t RAxML_bootstrap.bootstrap_all.tre -g Plutella_xylostella -o RAxML_bootstrap.bootstrap_all_rooted.tre
+```
+- Create a separate file for each bootstrap tree so later we can run TreePL on each tree 
+
+```
+mkdir -p 100_trees
+split -l 1 RAxML_bootstrap.bootstrap_all_rooted.tre 100_trees/RAxML_bestTree.BSone_tree
+for i in 100_trees/*; do mv $i $i.tre; done
 ```
 
-## 3) Phasing and missing data imputation
-The phasing and the data imputation were done using ShapeIT with default option. Shape it was applied to each scaffold/chromosome separately. Each phased VCF was also zipped (bgzip) and tabulated (tabix). 
+## 11) Running TreePL
+Divergence time estimates were obtained using a penalized-likelihood based approach implemented in TreePL.
 
 ``` bash
-SCAFFOLD=$(sed -n "${SLURM_ARRAY_TASK_ID}"p list_of_scaffolds.txt)
-$SHAPEIT --input snps.vcf.gz --region $SCAFFOLD --output phased.snps.vcf
-bgzip phased.snps.vcf && tabix -p vcf phased.snps.vcf.gz
+mkdir -p ../Results/step1_output
+#python3 ./run_treepl.py ../Results/10_trees ${SLURM_ARRAY_TASK_ID} ../Results/step1_output
+for i in {1..100}; do python3 ./run_treepl.py ../Results/100_trees $i ../Results/step1_output; done
+#python3 ./run_treepl2.py ../Results/10_trees ${SLURM_ARRAY_TASK_ID} ../Results/step2.1_output
+for i in {1..100}; do ./run_treepl2.py ../Results/100_trees $i ../Results/step2.1_output; done
+#python3 ./run_treepl3.py ../Results/10_trees ${SLURM_ARRAY_TASK_ID} ../Results/step3_output
+for i in {1..100}; do python3 ./run_treepl3.py ../Results/100_trees $i ../Results/step3_output; done
+
 ```
 
 
