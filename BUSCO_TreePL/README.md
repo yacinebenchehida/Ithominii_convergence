@@ -89,12 +89,41 @@ We concatenated all the  gene sequence aligments in a single superaligment fasta
 $SEQKIT concat *.fna  > ../final.fna
 ```
 
-### 7)
-The VCFs were further filtered using BCFtools. More precisely BCFtools was used to keep bi-allelic SNPs with a variant quality score of at least 10, a genotype quality of at least 10, a depth of coverage of at least 5 and to exclude any SNPs with more than 20% of missing data.
+### 7)Maximum Likelihood tree of the busco genes
+
+- The relationship between the busco genes was inferred using RAxML v8 using the GTRGAMMAI substitution model (RaxML.sh). 
+``` bash
+$RAXML -s final.fna -m GTRGAMMAI -n BUSCO_PHYLO -p 1234
+```
+
+- The following command was used to remove information on branches length (which prevent later steps to work).
+  
+``` bash
+sed -r 's/[0-9:.]//g' input.tre > output_topo.tre
+```
+
+### 8) Get bootstrap alignments
+The following command was used to bootstrap the alignment fasta file (final.fna). We generated 100 bootstrap alignments using the option -f j in RAxML.
+``` bash
+$RAXML -f j -m GTRGAMMAI -s final.fna -n BS -# 100 -b $RANDOM
+```
+
+### 9) Getting a tree for each bootstrapped alignment
+
+- We optimized the model parameters and branch lengths of the bootstrapped alignments while constraining the topology to match the previously inferred ML tree (step 7) using the -f e option in RAxML.
 
 ``` bash
-bcftools filter -e 'FORMAT/DP < 1 |FORMAT/GQ < 5 |QUAL <= 5' --set-GTs . genotypeGVCF.intervals_${SLURM_ARRAY_TASK_ID}.vcf.gz -O u | bcftools view -U -i 'TYPE=="snp"' -m2 -M2 -v snps -O v| bcftools view -i 'F_MISSING < 0.2'> genotypeGVCF.intervals_${SLURM_ARRAY_TASK_ID}.filters.snps.vcf
+for i in {0..99};
+do
+	$RAXML -f e -t output_topo.tre -m GTRGAMMAI -s final.fna.BS"$i" -n BS_"$i";
+done
 ```
+
+- We combine the tree inferred for each alignement in a single file using the following command
+``` bash
+cat RAxML_result.BS* > RAxML_bootstrap.bootstrap_all.tre
+```
+
 ### Combining all VCF intervals in a single VCF
 We combined all 60 intervals to generate a single VCF for each species. Each VCF was also zipped (bgzip) and tabulated (tabix). 
 
