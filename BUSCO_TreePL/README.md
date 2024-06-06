@@ -102,7 +102,7 @@ $RAXML -s final.fna -m GTRGAMMAI -n BUSCO_PHYLO -p 1234
 sed -r 's/[0-9:.]//g' input.tre > output_topo.tre
 ```
 
-NB: Steps 8 to 13 are largely inspired by this: [GitHub Pages](https://github.com/sunray1/treepl/tree/master)
+NB: Steps 8 to 12 are largely inspired by this: [GitHub Pages](https://github.com/sunray1/treepl/tree/master)
 
 ## 8) Get bootstrap alignments
 The following command was used to bootstrap the alignment fasta file (final.fna). We generated 100 bootstrap alignments using the option -f j in RAxML.
@@ -141,17 +141,43 @@ for i in 100_trees/*; do mv $i $i.tre; done
 ```
 
 ## 11) Running TreePL
-Divergence time estimates were obtained using a penalized-likelihood based approach implemented in TreePL.
+
+Divergence time estimates were obtained using a penalized-likelihood based approach implemented in TreePL (script submit_treepl.sh).
+The script consist in 3 steps:
+
+- 1) A priming step erformed on each of the 100 bootstrap trees
 
 ``` bash
 mkdir -p ../Results/step1_output
-#python3 ./run_treepl.py ../Results/10_trees ${SLURM_ARRAY_TASK_ID} ../Results/step1_output
 for i in {1..100}; do python3 ./run_treepl.py ../Results/100_trees $i ../Results/step1_output; done
-#python3 ./run_treepl2.py ../Results/10_trees ${SLURM_ARRAY_TASK_ID} ../Results/step2.1_output
-for i in {1..100}; do ./run_treepl2.py ../Results/100_trees $i ../Results/step2.1_output; done
-#python3 ./run_treepl3.py ../Results/10_trees ${SLURM_ARRAY_TASK_ID} ../Results/step3_output
-for i in {1..100}; do python3 ./run_treepl3.py ../Results/100_trees $i ../Results/step3_output; done
-
 ```
 
+- 2) A cross-validation step that we run 10 times for each 100 bootstrap trees
 
+```
+for run in {1..10}; \
+do
+	for i in {1..100};
+	do
+		./run_treepl2.py ../Results/100_trees $i ../Results/step2."$run"_output;
+	done 
+done
+```
+
+- 3) A dating step based on the best smoothing parameters
+
+```
+for i in {1..100}; do python3 ./run_treepl3.py ../Results/100_trees $i ../Results/step3_output; done
+```
+
+## 12) Summarise the divergence time estimates using treeAnnotator
+
+We used the TreeAnnotator utilities from the Beast package to calculated the 95% highest posterior density for the node ages using a burnin of 10%. 
+
+```
+cd ../Results/step3_output
+cat *.tre > treeall_dated.tre
+treeannotator -burnin 10 treeall_dated.tre out.txt
+```
+
+## 13) Plotting the results with 
