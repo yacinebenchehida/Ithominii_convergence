@@ -70,28 +70,26 @@ for i in *fna; do
 done
 ```
   
-## 5) Replace fasta headers so they are all the same
-The folder 3_Combined_gvcf contains the scripts used to merge GVCFs of all samples of one species. We used the CombineGVCFs option of GATK for that end. For the sake of speed, the script was applied to each species and each genome interval.
+## 5) Replace fasta headers with only the species name
+This step is essential so in step 6 we can merge together all the gene sequence aligments in a single superaligment.  
 
 ``` bash
-gatk --java-options -Xmx15g CombineGVCFs \
--R $ref_genome \
-$variants \
--O intervals_merged_${SLURM_ARRAY_TASK_ID} \
--intervals $intervals
+cd ../aligned_concatanated_genes_nucl
+for j in *.fna; do 
+	for i in Bicyclus_anynana Chetone_histrio  Heliconius_erato Heliconius_numata Hypothyris_anastasia Mechanitis_mazaeus Melinaea_isocomma Melinaea_menophilus Plutella_xylostella Biston_betularia Danaus_plexippus Heliconius_melpomene Heliconius_pardalinus Ithomia_salapia Mechanitis_messenoides Melinaea_marsaeus Melinaea_mothone Tithorea_tarricina; do 
+		sed -i -E ':a;N;$!ba; s/(>)([a-zA-Z0-9\_\.]+):([0-9]+)-([0-9]+)/\1'"${i}"'/1' $j; 
+	done; 
+done
 ```
 
 ### 6) Concatenate all the genes in a single fasta file
-The folder 4_Genotype_gvcfs contains the scripts necessary to genotype the GVCFs and generate raw VCFs. It uses GenotypeGVCFs option of GATK. For the sake of speed, the script was applied to each species and each genome interval.
+We concatenated all the  gene sequence aligments in a single superaligment fasta file. This step rely on the softwawre SeqKit.
 
 ``` bash
-gatk --java-options -Xmx15g GenotypeGVCFs \
--R $ref_genome \
--V intervals_merged_${SLURM_ARRAY_TASK_ID} \
--O genotypeGVCF.intervals_${SLURM_ARRAY_TASK_ID}.vcf.gz
--intervals $intervals
+$SEQKIT concat *.fna  > ../final.fna
 ```
-### Filter VCFs
+
+### 7)
 The VCFs were further filtered using BCFtools. More precisely BCFtools was used to keep bi-allelic SNPs with a variant quality score of at least 10, a genotype quality of at least 10, a depth of coverage of at least 5 and to exclude any SNPs with more than 20% of missing data.
 
 ``` bash
