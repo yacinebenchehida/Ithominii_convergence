@@ -28,18 +28,24 @@ $GEMMA -bfile $RESULTS_FOLDER -lmm 4 -o assoc.gemma -k relatedness.cXX.txt > gem
 
 ## 3) Plot the Manhattan plot
 
-Manhattan plot summarising the results along the whole genome were plotted using R. 
+Manhattan plot summarising the results along the whole genome were plotted using R.
 
+- In order to scaffolds plotted by increasing order we first ran the scaffold_size.py script on the reference genome.
 ``` bash
 # Create file with scaffold sorted by ascending size
 module load  Biopython/1.79-foss-2022a
-python $SCAFFOLD_SIZE_SCRIPT  $REF/$FASTA_REF|sort -k 2 -nr|awk '{print $1}' > $RESULTS/scaffold_order_$2.txt
+python ./scaffold_size.py  $REFERENCE|sort -k 2 -nr|awk '{print $1}' > scaffold_order.txt
+```
 
-# Get the number of SNPs used for the analyses (used to define the bonferroni threshold)
+- The to get the number of SNPs used for the analyses (used to define the bonferroni threshold) we defined the THRESHOLD variable:
+``` bash
 THRESHOLD=$(cat $RESULTS/*assoc.gemma.log.txt|grep "analyzed SNPs/var" |awk '{print $7}')
+``` 
 
-# Make a png plot of the gwas (low quality)
-Rscript $PLOT_SCRIPT $RESULTS/"$2".assoc.gemma.assoc.txt $RESULTS/scaffold_order_$2.txt $THRESHOLD $RESULTS
+- Finally the GWAS Manhattan plot is plotted using the R script Plot.R.
+``` bash
+# Make a png plot of the gwas 
+Rscript ./Plot.R $RESULTS/*.assoc.gemma.assoc.txt $RESULTS/scaffold_order.txt $THRESHOLD $RESULTS
 ```
 
 
