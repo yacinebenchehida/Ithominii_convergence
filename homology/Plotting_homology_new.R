@@ -17,6 +17,8 @@ target_species = dat[3]
 ####################################
 # "Linearise" the query coordinates #
 ####################################
+offset <- abs(floor((input$SubjectStart[1]-input$start[1]) / 1000) * 1000)
+
 for (i in 1:dim(input)[1]){
   input[i,5] = input[i,5] + input[i,1] - 1
   input[i,6] = input[i,6] + input[i,1] - 1
@@ -26,7 +28,7 @@ for (i in 1:dim(input)[1]){
 ##############################################
 # Keep only the most reliable alignment bits #
 ##############################################
-input = input[input$Quality > 40,]
+input = input[input$Quality > 20,]
 input = input[,-c(1,2)]
 
 
@@ -100,10 +102,10 @@ anno = as.data.frame(do.call(rbind,list))
 ########################################################################
 # offset the annotation so the coordinate fit the one of the alignment #
 ########################################################################
-anno[anno$V1==unique(anno$V1)[1],4]= anno[anno$V1==unique(anno$V1)[1],4] + input$queryStart[1] 
-anno[anno$V1==unique(anno$V1)[1],5]= anno[anno$V1==unique(anno$V1)[1],5] + input$queryStart[1]
-anno[anno$V1==unique(anno$V1)[2],4]= anno[anno$V1==unique(anno$V1)[2],4] + input$SubjectStart[1] 
-anno[anno$V1==unique(anno$V1)[2],5]= anno[anno$V1==unique(anno$V1)[2],5] + input$SubjectStart[1]
+#anno[anno$V1==unique(anno$V1)[1],4]= anno[anno$V1==unique(anno$V1)[1],4] + input$queryStart[1] 
+#anno[anno$V1==unique(anno$V1)[1],5]= anno[anno$V1==unique(anno$V1)[1],5] + input$queryStart[1]
+#anno[anno$V1==unique(anno$V1)[2],4]= anno[anno$V1==unique(anno$V1)[2],4] + input$SubjectStart[1] 
+#anno[anno$V1==unique(anno$V1)[2],5]= anno[anno$V1==unique(anno$V1)[2],5] + input$SubjectStart[1]
 
 #####################################################################################################
 # Extract alignment regions in the annotation file. These bits will be colorised in bed in the plot #
@@ -131,12 +133,12 @@ pdf(paste("plot_syntheny_windows_",dat[2],"_",dat[3],".pdf",sep=""),12,9)
 ggplot(plotting_data, aes(x = x, y = y, group = group)) +
   geom_polygon(fill="black",alpha = 0.5) +
   theme_minimal() + 
-  geom_rect(aes(xmin = 0, xmax = max(plotting_data[plotting_data$y=="1",1]) , ymin = 0.95, ymax = 0.75), colour = "black", fill = "white") + 
-  scale_y_continuous(breaks = unique(plotting_data$y), labels = c("menophilus","mothone")) +
+  geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1==query_species,5]) , ymin = 0.95, ymax = 0.75), colour = "black", fill = "white") +
+  scale_y_continuous(breaks = unique(plotting_data$y), labels = c(query_species,target_species)) +
   geom_rect(data = anno[anno$V1==unique(anno$V1)[1],], aes(xmin = V4, xmax = V5, ymin = 0.948 , ymax = 0.752,  fill = V3),   inherit.aes = FALSE) +
   theme(axis.text.x = element_blank()) +
-  scale_fill_manual(values = viridis(5)) +
-  geom_rect(aes(xmin = input$SubjectStart[1] , xmax = max(plotting_data[plotting_data$y=="3",1]), ymin = 3.05, ymax = 3.25), colour = "black", fill = "white") +
+  scale_fill_manual(values = viridis(6)) +
+  geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1==target_species,5]), ymin = 3.05, ymax = 3.25), colour = "black", fill = "white") +
   geom_rect(data = anno[anno$V1==unique(anno$V1)[2],], aes(xmin = V4, xmax = V5, ymin = 3.052 , ymax = 3.248, fill = V3),inherit.aes = FALSE) +
   theme(axis.ticks.x = element_blank()) +
   geom_polygon(data=to_colorise, aes(x = x, y = y, group = group), fill="red",alpha = 0.5) +
