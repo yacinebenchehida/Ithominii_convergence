@@ -127,7 +127,7 @@ to_colorise <- do.call(rbind,list)
 ############
 # Plotting #
 ############
-pdf(paste("plot_syntheny_windows_",dat[2],"_",dat[3],".pdf",sep=""))
+pdf(paste("plot_syntheny_windows_",dat[2],"_",dat[3],".pdf",sep=""),12,9)
 ggplot(plotting_data, aes(x = x, y = y, group = group)) +
   geom_polygon(fill="black",alpha = 0.5) +
   theme_minimal() + 
