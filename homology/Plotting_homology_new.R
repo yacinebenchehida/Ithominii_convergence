@@ -136,7 +136,7 @@ ggplot(plotting_data, aes(x = x, y = y, group = group)) +
   geom_rect(data = anno[anno$V1==unique(anno$V1)[1],], aes(xmin = V4, xmax = V5, ymin = 0.948 , ymax = 0.752,  fill = V3),   inherit.aes = FALSE) +
   theme(axis.text.x = element_blank()) +
   scale_fill_manual(values = viridis(5)) +
-  geom_rect(aes(xmin = difference, xmax = max(plotting_data[plotting_data$y=="3",1]), ymin = 3.05, ymax = 3.25), colour = "black", fill = "white") +
+  geom_rect(aes(xmin = input$SubjectStart[1] , xmax = max(plotting_data[plotting_data$y=="3",1]), ymin = 3.05, ymax = 3.25), colour = "black", fill = "white") +
   geom_rect(data = anno[anno$V1==unique(anno$V1)[2],], aes(xmin = V4, xmax = V5, ymin = 3.052 , ymax = 3.248, fill = V3),inherit.aes = FALSE) +
   theme(axis.ticks.x = element_blank()) +
   geom_polygon(data=to_colorise, aes(x = x, y = y, group = group), fill="red",alpha = 0.5) +
