@@ -11,8 +11,9 @@ module load minimap2/2.26-GCCcore-12.2.0
 # Set useful directories #
 ##########################
 Results="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Results"
-data_gwas="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data"
+data_gwas="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS"
 Inputs="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs"
+annotation="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs/annotation.txt"
 
 ############################################################################################
 # Find top SNPs in the GWAS and create a fasta based on a windows of 150kb around the peak #
@@ -21,11 +22,14 @@ for i in $@
 do
 	ref_genome="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$i"
 	fasta_sequence=$(ls $ref_genome|grep -E "*.fa$|*.fasta$")
-	cat $data_gwas/"$i".txt |awk '$4 < 0.000000001'|LC_ALL=C sort -g -k 4|head -n 3|awk '{print $1"\t"$3"\t"$4}' > top_peak_positions_"$i".txt	
-	values=$(Rscript position_extra.R top_peak_positions_"$i".txt)
-	echo $values
-	python selection_seq_interval.py  $ref_genome/$fasta_sequence $values $i> $Results/Cortex_"$i".fasta
-	rm top_peak_positions_"$i".txt
+	#cat $data_gwas/"$i".txt |awk '$4 < 0.000000001'|LC_ALL=C sort -g -k 4|head -n 3|awk '{print $1"\t"$3"\t"$4}' > top_peak_positions_"$i".txt	
+	#values=$(Rscript position_extra.R top_peak_positions_"$i".txt)
+	Scaffold=$(cat /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/annotation_info/annotation.txt|grep $i|head -n 1|awk -F"\t" '{print $2}')
+	starting_position=$(python3 ./find_min_max.py $annotation $i|awk '{print $1}')
+	ending_position=$(python3 ./find_min_max.py $annotation $i|awk '{print $2}')
+	echo $Scaffold $starting_position $ending_position
+	python selection_seq_interval.py  $ref_genome/$fasta_sequence $Scaffold $starting_position $ending_position $i> $Results/Cortex_"$i".fasta
+	#rm top_peak_positions_"$i".txt
 done
 
 echo FOUND PEAKS
@@ -69,6 +73,7 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
 	WINDOWS=1000
 	SLIDE=1000
 	echo $SIZE
+
  	# Loop for each pair of species in the define scaffold over windows of the same size
 	for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j=j+$SLIDE)) 
 	do
@@ -77,14 +82,16 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
 		echo -e $i"\t"$j"\t"$RES |perl -pe 's/ /\t/g' >> mapping.txt
 		rm "$current"_"$i"_"$j".fasta
 	done
+
 	# Combine the results
 	mkdir -p $Results/minimap2/sliding_windows_mapping
 	cat mapping.txt|awk 'NF > 2' > $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt
 	rm mapping.txt
+
 	#Plot the results
-	Rscript ./plot_syntheny.R  $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt $current $next
+	Rscript ./Plotting_homology_new.R  $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt $current $next
 	# Remove pointless files
-	rm minimap_plot.txt
+	#rm minimap_plot.txt
 	mv *pdf $Results/minimap2/sliding_windows_mapping/
 	echo -E "END SLIDING WINDOWS $current $next"
 done
