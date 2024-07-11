@@ -6,8 +6,8 @@ library(viridis)
 dat = commandArgs(trailingOnly=TRUE)
 
 aln = read.table(dat[1],header = TRUE,fill = TRUE)
-query_species = dat[3]
-target_species = dat[2]
+query_species = dat[2]
+target_species = dat[3]
 aln <- aln[aln$Identity > 60,]
 
 
