@@ -23,7 +23,7 @@ python selection_seq_interval.py  fasta_reference_species2.fasta Scaffold_name s
 ```
 
 ## 2) Run nucmer in sliding windows of 1000bp
-The block below divides the fasta sequence of sp1 into windows of 1000bp and align them against the fasta sequence of sp2 using nucmer. 
+The block below divides the fasta sequence of sp1 into windows of 1000bp (python script selection_seq_interval_bis.py) and align them against the fasta sequence of sp2 using nucmer. 
 
 ``` bash
 echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tIdentity" >  mapping.txt
@@ -51,13 +51,16 @@ nucmer --mum -c 20 -b 500 -l 10 --maxgap 500
 **--mum**: matches that are unique in both the reference and query.
 
 **-c 20**: Sets the minimum length of a cluster of matches to 20bp.
+
 **-b 500**: Sets the distance an alignment extension will attempt to extend poor scoring regions before giving up to 500bp.
+
 **-l 10**: Sets the minimum length of a single match to 10bp.
+
 **-maxgap**: Sets the maximum gap between two adjacent matches in a cluster to 500bp. 
 
-## 3) Plot the Manhattan plot
+## 3) Plot the alignment plots
 
-Manhattan plot summarising the results along the whole genome were plotted using R.
+Plots summarising the results along the regions of interest were plotted in R.
 
 - In order to scaffolds plotted by increasing order we first ran the scaffold_size.py script on the reference genome.
 ``` bash
