@@ -2,12 +2,12 @@
 
 This folder contains all the scripts used to perform the peaks alignment in sliding windows using nucmer from the MUMmer package.
 
-## 0) Prepare the data for the analysis
+## 0) Running the analysis
 
-The first step uses PLINK to convert the raw input file into bed, bim and fam format files. These different files used by GEMMA to perform downstream analyses. 
+The whole pipeline can be run using the command below: 
 
 ``` bash
-$PLINK --vcf $VCF --double-id --allow-extra-chr --allow-no-sex --set-missing-var-ids @:# --pheno $PHENOTYPES --make-bed --out $RESULTS
+./master.sh species1 species1 mummer
 ```
 
 ## 1) Get pairwise relatedness between individuals
