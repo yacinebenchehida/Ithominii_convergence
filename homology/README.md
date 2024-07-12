@@ -12,12 +12,14 @@ The whole pipeline can be run using the command below:
 This pipeline will run the analysis and generate an "alignment plot" for the two species of interest around the cortex region.  
 It requires  [MUMmer](https://mummer.sourceforge.net/manual/) and [Biopython](http://biopython.org/) to work. 
 
-## 1) Get pairwise relatedness between individuals
+## 1) Extracting the regions to align from the reference genome
 
-To control for  population structure, GEMMA computed the relatedness among samples. We used the following command to compute the pairwise relastedness matrix:
+We first start by extracting the region we will align from the reference genome of the two species we want to compare. This step uses the python script selection_seq_interval.py. 
 
 ``` bash
-$GEMMA -bfile $RESULTS_FOLDER -gk 1 > gemma_relatedness2.out
+python selection_seq_interval.py  fasta_reference_species1.fasta Scaffold_name starting_position_species1 end_position_species1 Species1_name > "$Species1"_name.fasta
+python selection_seq_interval.py  fasta_reference_species2.fasta Scaffold_name starting_position_species2 end_position_species2 Species2_name > "$Species2"_name.fasta
+
 ```
 
 ## 2) Run the GWAS
