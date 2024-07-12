@@ -2,13 +2,15 @@
 
 This folder contains all the scripts used to perform the peaks alignment in sliding windows using nucmer from the MUMmer package.
 
-## 0) Running the analysis
+## 0) Running the whole pipeline
 
 The whole pipeline can be run using the command below: 
 
 ``` bash
-./master.sh species1 species1 mummer
+./master.sh species1 species2 cortex mummer
 ```
+This pipeline will run the analysis and generate an "alignment plot" for the two species of interest around the cortex region.  
+It requires  [MUMmer](https://mummer.sourceforge.net/manual/) and [Biopython](http://biopython.org/) to work. 
 
 ## 1) Get pairwise relatedness between individuals
 
