@@ -49,6 +49,7 @@ Due to the difficulty of aligning distantly related genomics regions, we used th
 nucmer --mum -c 20 -b 500 -l 10 --maxgap 500
 
 **--mum**: matches that are unique in both the reference and query.
+
 **-c 20**: Sets the minimum length of a cluster of matches to 20bp.
 **-b 500**: Sets the distance an alignment extension will attempt to extend poor scoring regions before giving up to 500bp.
 **-l 10**: Sets the minimum length of a single match to 10bp.
