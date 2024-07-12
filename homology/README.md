@@ -26,7 +26,7 @@ python selection_seq_interval.py  fasta_reference_species2.fasta Scaffold_name s
 The block below divides the fasta sequence of sp1 into windows of 1000bp (python script selection_seq_interval_bis.py) and align them against the fasta sequence of sp2 using nucmer. 
 
 ``` bash
-echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tIdentity" >  mapping.txt
+echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tIdentity" >  mapping_nucmer_sliding_windows_sp1_sp2.txt
 # Define the size of the size genomic region that is going to be plotted
 SIZE=$(python3 -W ignore scaffold_size.py Species1_name.fasta|awk '{print $2}')
 
@@ -41,8 +41,9 @@ for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j=j+$SLIDE))
 		nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" sp2.fasta sp1_"$i"_"$j".fasta # align the window of 1000bp against sp2
 		show-coords -rcl tmp_"$i"_"$j".delta > tmp_nucmer_sp1_sp2_"$i"_"$j".txt # Transform the raw mummer output into an output that shows the coordinate
 		(cat tmp_nucmer_sp1_sp2_"$i"_"$j".txt |grep -v "====="|awk 'NR> 4'|perl -pe 's/ +/\t/g' |perl -pe 's/^\t//g'|perl -pe 's/\|\t//g'|awk '{print $12"\t"$8"\t"$1"\t"$2"\t"$13"\t"$9"\t"$3"\t"$4"\t"$7}') > tmp3 # extract the useful information for the mummer results and reshape it for plotting
-		awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping.txt # Add window number to the final output
+		awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping_nucmer_sliding_windows_sp1_sp2.txt # Add window number to the final output
 done
+
 ```
 
 Due to the difficulty of aligning distantly related genomics regions, we used the following flags in nucmer:
@@ -60,11 +61,8 @@ nucmer --mum -c 20 -b 500 -l 10 --maxgap 500
 
 ## 3) Plot the alignment plots
 
-Plots summarising the results along the regions of interest were plotted in R.
+Plots summarising the results along the regions of interest were plotted in R using the script plotting_nucmer_windows.R.
 
-- In order to scaffolds plotted by increasing order we first ran the scaffold_size.py script on the reference genome.
 ``` bash
-# Create file with scaffold sorted by ascending size
-module load  Biopython/1.79-foss-2022a
-python ./scaffold_size.py  $REFERENCE|sort -k 2 -nr|awk '{print $1}' > scaffold_order.txt
+Rscript ./plotting_nucmer_windows.R mapping_nucmer_sliding_windows_sp1_sp2.txt sp1 sp2
 ```
