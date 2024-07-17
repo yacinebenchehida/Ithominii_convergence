@@ -15,7 +15,7 @@ Inputs="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs
 annotation="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs/Optix_annotation.txt"
 
 ############################################################################################
-# Find top SNPs in the GWAS and create a fasta based on a windows of 150kb around the peak #
+# Find top SNPs in the GWAS and create a fasta in the peak regions and surrounding genes   #
 ############################################################################################
 for i in $@
 do
