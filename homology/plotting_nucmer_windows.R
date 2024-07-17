@@ -6,16 +6,16 @@ library(viridis)
 dat = commandArgs(trailingOnly=TRUE)
 
 aln = read.table(dat[1],header = TRUE,fill = TRUE)
-query_species = dat[3]
-target_species = dat[2]
-aln <- aln[aln$Identity > 60,]
+query_species = dat[2]
+target_species = dat[3]
+aln <- aln[aln$Identity > 40,]
 
 
 ###################################
 # Load the annotation information #
 ###################################
-anno <- read.table("/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs/annotation.txt",sep="\t")
-anno <- anno[anno$V1 %in% c(query_species,target_species),]
+anno <- read.table(dat[4],sep="\t")
+anno <- anno[anno$V1 %in% c(target_species,query_species),]
 
 # Function to check the coordinate of the annotation and adjust the value. Also if the reference genome is reverse complemented it reorder the annotation so i$
 check_direction_and_realign_annotation <- function(anno){
@@ -62,8 +62,6 @@ anno = as.data.frame(do.call(rbind,list))
 ############################
 # Figure out genome offset #
 ############################
-offset <- abs(floor((aln$queryStart[1]-aln$start[1]) / 1000) * 1000)
-
 for (i in 1:dim(aln)[1]){
   aln[i,9] = aln[i,9] + aln[i,1] - 1 
   aln[i,10] = aln[i,10] + aln[i,1] - 1 
@@ -79,15 +77,15 @@ if(size_difference < 5000){
   size_difference = 5000
 }
 
-tolerance <-  seq(from = 5000, to = size_difference + 2000, length.out = dim(aln)[1])
+tolerance <-  seq(from = 7000, to = size_difference +7000, length.out = dim(aln)[1])
 list = list()
 counter = 1
 
-differential <- aln$SubjectEnd[length(aln$SubjectEnd)] - aln$queryEnd[length(aln$queryEnd)]
+differential <- max(anno[anno$V1==target_species,5])-max(anno[anno$V1==query_species,5])
 
 for (i in 1:dim(aln)[1]){
   tol <- tolerance[i]
-  difference <- aln$SubjectEnd[i]-aln$queryEnd[i]
+  difference <- aln$subjectEnd[i]-aln$queryEnd[i]
        if(abs(difference) <  tol & differential < 0 & difference < 0){
          print(paste(i,abs(difference), differential, tol))
           list[[counter]] = aln[i,]
@@ -113,11 +111,11 @@ counter = 1
 
 for (i in 1:dim(aln)[1]){
   list[[counter]] <- data.frame(
-    x = c(aln$queryStart[i],aln$queryEnd[i],  aln$SubjectEnd[i],aln$SubjectStart[i]),
+    x = c(aln$subjectStart[i],aln$subjectEnd[i],  aln$queryEnd[i],aln$queryStart[i]),
     y = c(1,1,3,3),
     group = paste("window_",i,sep=""), 
     order = c(1, 2, 4, 3),
-    reference = c(query_species, query_species, target_species, target_species))
+    reference = c(target_species, target_species,query_species, query_species))
   counter = counter + 1
 }
 
@@ -134,17 +132,29 @@ counter = 1
 for (i in unique(plotting_data$group)){
   tmp1 = plotting_data[plotting_data$group==i & plotting_data$y==1,]
   tmp2 = plotting_data[plotting_data$group==i & plotting_data$y==3,]
-  for (j in 1:dim(to_colorise_query)[1]){
-    if(any(tmp1$x >=  to_colorise_query[j,2] & tmp1$x <= to_colorise_query[j,3])){
-      if(any(tmp2$x >=  to_colorise_target[j,2] & tmp2$x <= to_colorise_target[j,3])){
+  for (j in 1:dim(to_colorise_target)[1]){
+    if(any(!is.na(to_colorise_target[j, 2]) & !is.na(to_colorise_target[j, 3]) & tmp1$x >=  to_colorise_target[j, 2] & tmp1$x <= to_colorise_target[j, 3])){
+      if(any(!is.na(to_colorise_query[j, 2]) & !is.na(to_colorise_query[j, 3]) & tmp2$x >= to_colorise_query[j, 2] & tmp2$x <= to_colorise_query[j, 3])){
       list[[counter]] = plotting_data[plotting_data$group==i,]
       counter = counter + 1
       }
+      }
     }
   }
-}
+
 
 to_colorise <- do.call(rbind,list)
+
+##################
+# set color code #
+##################
+gene <-anno$V3[1]
+
+if(gene=="Hyd. like"){
+  color_code <- magma(10)[c(1,6,9,4)]
+}else{
+  color_code <- c(viridis(5),"orange")
+}
 
 
 ############
@@ -152,15 +162,15 @@ to_colorise <- do.call(rbind,list)
 ############
 pdf(paste("plot_syntheny_windows_nucmer_",dat[2],"_",dat[3],".pdf",sep=""),12,9)
 ggplot(plotting_data, aes(x = x, y = y, group = group)) +
-  geom_polygon(fill="black",alpha = 0.3) +
+  geom_polygon(color = "grey",fill="black",alpha = 0.4) +
   theme_minimal() + 
-  geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1==query_species,5]) , ymin = 0.95, ymax = 0.75), colour = "black", fill = "white") + 
-  scale_y_continuous(breaks = unique(plotting_data$y), labels = c(query_species,target_species)) +
-  geom_rect(data = anno[anno$V1==unique(anno$V1)[1],], aes(xmin = V4, xmax = V5, ymin = 0.948 , ymax = 0.752,  fill = V3),   inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1==target_species,5]) , ymin = 0.95, ymax = 0.75), colour = "black", fill = "white") + 
+  scale_y_continuous(breaks = unique(plotting_data$y), labels = c(target_species,query_species)) +
+  geom_rect(data = anno[anno$V1==unique(anno$V1)[2],], aes(xmin = V4, xmax = V5, ymin = 0.948 , ymax = 0.752,  fill = V3),   inherit.aes = FALSE) +
   theme(axis.text.x = element_blank()) +
-  scale_fill_manual(values = viridis(6)) +
-  geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1==target_species,5]), ymin = 3.05, ymax = 3.25), colour = "black", fill = "white") +
-  geom_rect(data = anno[anno$V1==unique(anno$V1)[2],], aes(xmin = V4, xmax = V5, ymin = 3.052 , ymax = 3.248, fill = V3),inherit.aes = FALSE) +
+  scale_fill_manual(values = color_code) +
+  geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1==query_species,5]), ymin = 3.05, ymax = 3.25), colour = "black", fill = "white") +
+  geom_rect(data = anno[anno$V1==unique(anno$V1)[1],], aes(xmin = V4, xmax = V5, ymin = 3.052 , ymax = 3.248, fill = V3),inherit.aes = FALSE) +
   theme(axis.ticks.x = element_blank()) +
   geom_polygon(data=to_colorise, aes(x = x, y = y, group = group), color="brown",fill="brown") +
   labs(x = NULL, y = NULL) 
