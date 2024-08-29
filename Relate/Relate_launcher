@@ -1,0 +1,249 @@
+#!/bin/bash
+#SBATCH --time=03:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=10G 
+#SBATCH --account=BIOL-SPECGEN-2018 
+#SBATCH --job-name=Relate
+
+usage()
+{
+cat << EOF
+./Relate_laucher -v <vcf> -c <chromosome> -s <star_position> -e <end_position> -snps <list_snps> -f <pop_file> -t <list_taxa>  -o <path_output> -n <name> -h
+
+OPTIONS:
+  -v            Name of the vcf input
+  -c		Contig/Scaffold/Chromosome name
+  -s		Starting position in the VCF
+  -e		End position in the VCF
+  -snps		List of SNPs for which a newick tree will be plotted (comma separated)
+  -f            Population file
+  -t		List of taxa to analyses separated by a comma
+  -o		Output folder  path
+  -n            Prefix used for output files
+  -h            usage information and help (this message)
+EOF
+exit 0
+}
+
+# Parse command-line options
+options=$(getopt -o v:c:s:e:f:t:o:n:h --long snps: -- "$@")
+
+# Check for getopt errors
+if [ $? -ne 0 ]; then
+  usage
+fi
+
+# Set the parsed options back to positional parameters
+eval set -- "$options"
+
+# Extract options and their arguments
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+		-v)
+		  VCF=$2
+		  shift 2
+		  ;;
+		-c)
+		  CHR=$2
+		  shift 2
+		  ;;
+		-s)
+		  START=$2
+		  shift 2
+		  ;;
+		-e)
+		  END=$2
+		  shift 2
+		  ;;
+		--snps)
+		  SNPS=$2
+		  shift 2
+		  ;;
+		-f)
+		  POP=$2
+		  shift 2
+		  ;;
+		-t)
+		  TAXA=$2
+		  shift 2
+		  ;;
+		-o)
+		  OUTPUT_PATH=$2
+		  shift 2
+		  ;;
+		-n)
+		  PREFIX=$2
+		  shift 2
+		  ;;
+		-h)
+		  usage
+		  ;;
+		--)
+		  shift
+		  break
+		  ;;
+		*)
+		  usage
+		  ;;
+	esac
+done
+
+# Check if all mandatory arguments are provided
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
+then
+	usage
+	exit 1
+fi
+
+#########################
+# 2 - Display arguments #
+#########################
+echo -e VCF file:"${VCF}"
+echo -e Chromosome:"${CHR}"
+echo -e Start:"${START}"
+echo -e End:"${END}"
+echo -e SNPs:"${SNPS}"
+echo -e Population file:"${POP}"
+echo -e TAXA:"${TAXA}"
+echo -e Output path:"${OUTPUT_PATH}"
+echo -e Prefix:"${PREFIX}"
+
+##############################
+# 3 - Get the phenotype file #
+##############################
+mkdir -p $OUTPUT_PATH/$PREFIX
+if [ -f  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt ]; then
+    rm  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+fi
+touch  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+
+SPECIES=$(echo $TAXA|perl -pe 's/,/ /g')
+
+for i in $SPECIES; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
+echo POP FILE READY
+
+###############################################
+# 4 - Get VCF for specific region/individuals #
+###############################################
+module load  BCFtools/1.19-GCC-13.2.0
+bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+VCF="$OUTPUT_PATH/$PREFIX/$PREFIX.vcf.gz"
+echo "SUBSETTED VCF FILE READY"
+
+#################
+# 5 - phase vcf #
+#################
+echo STARTING PHASING
+SHAPEIT="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/shapeit4/bin/shapeit4.2"
+$SHAPEIT --input $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz --region $CHR --output $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf 
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
+echo PHASING PERFORMED
+
+VCF="$OUTPUT_PATH/$PREFIX/$PREFIX_phased.vcf"
+rm $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+
+#############################################################
+# 6 - Convert VCF to relate input files (*haps and *sample) #
+#############################################################
+RELATE="/mnt/scratch/projects/biol-specgen-2018/edd/software/relate_v1.2.1_x86_64_static"
+
+# Create VCF with human chromosome names
+echo -e $CHR"\t"1 > $OUTPUT_PATH/$PREFIX/chrom_names.txt
+bcftools annotate --rename-chrs $OUTPUT_PATH/$PREFIX/chrom_names.txt $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz
+rm $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
+echo VCF RENAMED
+
+# Create a plink linkage map
+module load VCFtools/0.1.16-GCC-11.2.0
+vcftools --gzvcf $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz --out $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map --plink
+echo PLINK LINKAGE MAP GENERATED
+
+# Create a Relate linkage map from the plink linkage map
+module load R/4.2.1-foss-2022a
+Rscript ./makeRelateMap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map.map
+echo RELATE LINKAGE MAP GENERATED
+
+# Create inputs required by Relate
+$RELATE/bin/RelateFileFormats \
+                 --mode ConvertFromVcf \
+                 --haps  $OUTPUT_PATH/$PREFIX/"$PREFIX".haps \
+                 --sample  $OUTPUT_PATH/$PREFIX/"$PREFIX".sample \
+                 -i $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed
+echo HAPS AND SAMPLE FILE GENERATED
+
+#######################################################
+# 7 - Generate the pop label file with the sex column #
+#######################################################
+(echo -e sample"\t"population"\t"group"\t"sex; awk '{print $0"\t"0}'  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt) > $OUTPUT_PATH/$PREFIX/"$PREFIX"_relate.poplabels
+echo RELATE POPLABELS READY
+
+##################
+# 8 - Run RELATE #
+##################
+cd  $OUTPUT_PATH/$PREFIX
+
+$RELATE/bin/Relate \
+                 --mode All \
+                 -m 2.9e-9 \
+                 -N 20000000 \
+                 --haps "$PREFIX".haps \
+                 --sample "$PREFIX".sample \
+                 --map "$PREFIX"_linkage_map.map \
+                 --seed 384 -o $PREFIX
+echo RELATE RUN
+
+#############################
+# 9 - Extract specific SNPs #
+#############################
+# Get list of SNPs
+SNP=$(echo $SNPS|perl -pe 's/,/ /g')
+# Initialize min and max with an unset value
+min_value=
+max_value=
+
+# Iterate through the list of snps positions to find minimum and maximum
+for num in $SNP; do
+# If min_value is unset or current number is less than min_value, update min_value
+    if [[ -z "$min_value" || "$num" -lt "$min_value" ]]; then
+        min_value="$num"
+    fi
+
+    # If max_value is unset or current number is greater than max_value, update max_value
+    if [[ -z "$max_value" || "$num" -gt "$max_value" ]]; then
+        max_value="$num"
+    fi
+done
+
+# Extract Relate results between the minimum and maximum SNPs position
+$RELATE/bin/RelateExtract \
+                 --mode AncToNewick \
+                 --haps "$PREFIX".haps \
+                 --sample "$PREFIX".sample \
+                 --anc  "$PREFIX".anc \
+                 --mut "$PREFIX".mut \
+                 --first_bp $min_value\
+                 --last_bp $max_value\
+                 --poplabels "$PREFIX"_relate.poplabels \
+                 -o "$PREFIX"_"$CHR"_"$min_value"-"$max_value"
+
+echo RELATE RESULTS EXTRACTED
+
+# Plot Tree for the specified SNPs
+
+for i in $SNP; do \
+$RELATE/scripts/TreeView/TreeView.sh \
+                --haps "$PREFIX".haps \
+                --sample "$PREFIX".sample \
+                --anc "$PREFIX".anc \
+                --mut "$PREFIX".mut \
+                --poplabels "$PREFIX"_relate.poplabels \
+                --bp_of_interest $i \
+                --years_per_gen 1 \
+		-o "$PREFIX"_"$i"
+done
