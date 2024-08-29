@@ -1,0 +1,202 @@
+#SBATCH --time=03:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=10G 
+#SBATCH --account=BIOL-SPECGEN-2018 
+#SBATCH --job-name=raxml
+
+usage()
+{
+cat << EOF
+./Get_phylogenies.sh  -v <vcf> -c <chromosome> -s <star_position> -e <end_position> -f <pop_file> -p1 <taxa1> -p2 <taxa2> -p3 <taxa3> -po <outgroup> -o <path_output> -n <name> -m <method> -h
+
+OPTIONS:
+  -v            Name of the vcf input
+  -c		Contig/Scaffold/Chromosome name
+  -s		Starting position in the VCF
+  -e		End position in the VCF
+  -f            Population file
+  -p1		Taxa 1 name
+  -p2		Taxa 2 name
+  -p3		Taxa 3 name
+  -p4		Taxa 4 name
+  -po		Outgroup name 
+  -o		Output folder  path
+  -n            Prefix used for output files
+  -m		method: NJ or ML
+  -h            usage information and help (this message)
+EOF
+exit 0
+}
+
+# Parse command-line options
+options=$(getopt -o v:c:s:e:f:p1:p2:p3:p4:r:o:n:m:h -- "$@")
+
+# Check for getopt errors
+if [ $? -ne 0 ]; then
+  usage
+fi
+
+
+# Extract options and their arguments
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+		-v)
+		  VCF=$2
+		  shift 2
+		  ;;
+		-c)
+		  CHR=$2
+		  shift 2
+		  ;;
+		-s)
+		  START=$2
+		  shift 2
+		  ;;
+		-e)
+		  END=$2
+		  shift 2
+		  ;;
+		-f)
+		  POP=$2
+		  shift 2
+		  ;;
+		-p1)
+		  P1=$2
+		  shift 2
+		  ;;
+		-p2)
+		  P2=$2
+		  shift 2
+		  ;;
+		-p3)
+		  P3=$2
+		  shift 2
+		  ;;
+		-p4)
+                  P4=$2
+                  shift 2
+                  ;;
+		-po)
+		  PO=$2
+		  shift 2
+		  ;;
+		-o)
+		  OUTPUT_PATH=$2
+		  shift 2
+		  ;;
+		-n)
+		  PREFIX=$2
+		  shift 2
+		  ;;
+		-m)
+                  METHOD=$2
+                  shift 2
+                  ;;
+		-h)
+		  usage
+		  ;;
+		--)
+		  shift
+		  break
+		  ;;
+		*)
+		  usage
+		  ;;
+	esac
+done
+
+# Check if all mandatory arguments are provided
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $POP ]] || [[ -z $P1 ]] || [[ -z $P2 ]] || [[ -z $P3 ]] || [[ -z $P4 ]] || [[ -z $PO ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]] || [[ -z $METHOD ]]
+then
+	usage
+	exit 1
+fi
+
+# Display arguments
+echo -e VCF file:"${VCF}"
+echo -e Chromosome:"${CHR}"
+echo -e Start:"${START}"
+echo -e End:"${END}"
+echo -e Population file:"${POP}"
+echo -e P1:"${P1}"
+echo -e P2:"${P2}"
+echo -e P3:"${P3}"
+echo -e P4:"${P4}"
+echo -e Outgroup:"${PO}"
+echo -e Output path:"${OUTPUT_PATH}"
+echo -e Prefix:"${PREFIX}"
+echo -e Method:"${METHOD}"
+
+##############################
+# 2 - Get the phenotype file #
+##############################
+mkdir -p $OUTPUT_PATH/$PREFIX
+if [ -f  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt ]; then
+    rm  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+fi
+touch  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+for i in $P1 $P2 $P3 $P4 $PO; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
+echo POP FILE READY
+
+########################
+# 1 - Loading packages #
+########################
+module load RAxML-NG/1.0.2-gompi-2020b
+module load BCFtools/1.15.1-GCC-11.3.0
+module load Armadillo/12.6.2-foss-2023a
+module load HTSlib/1.15.1-GCC-11.3.0
+
+##########################################
+# 2 - Get VCF for the region of interest #
+##########################################
+bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+echo SUBSET GENOMIC REGION VCF READY
+
+#bcftools view -i 'F_MISSING < 0.5'
+
+VCF="$OUTPUT_PATH/$PREFIX/$PREFIX.vcf.gz"
+echo "SUBSETTED VCF FILE READY"
+
+##########################
+# 3 - VCF to PHYLIP FILE #
+##########################
+python3 vcf2phylip.py -i $VCF -r -m 0 --output-folder  $OUTPUT_PATH/$PREFIX --output-prefix $PREFIX
+echo "PHYLIP FILE READY"
+
+#######################
+# Find outgroup names #
+#######################
+OUTGROUPS=$(cat ${POP}|grep $PO|awk '{print $1}'|perl -pe 's/\n/,/g'|perl -pe 's/,$//g')
+
+#############
+# Run RAXML #
+#############
+if [ "$METHOD" == "ML" ]; then
+	echo "RAXML PHYLOGENY STARTING"
+	raxml-ng-mpi --search --msa $OUTPUT_PATH/$PREFIX/"$PREFIX"*.phy --model GTR+G+I --prefix $OUTPUT_PATH/$PREFIX/$PREFIX --threads 8 --force perf_threads --outgroup $OUTGROUPS
+	find  $OUTPUT_PATH/$PREFIX/ -type f ! -name "*bestTree" -exec rm -f {} +
+	echo "RAXML PHYLOGENY DONE"
+fi
+
+#####################
+# Fun Ape/phaghorn  #
+#####################
+if [ "$METHOD" == "NJ" ]; then
+	module load R/4.2.1-foss-2022a
+	module load Armadillo/12.6.2-foss-2023a
+	echo "NU PHYLOGENY STARTING"
+	Rscript NJ_tree.R $OUTPUT_PATH/$PREFIX/"$PREFIX"*.phy $OUTPUT_PATH/$PREFIX
+	echo "NJ PHYLOGENY DONE"
+	PXRR="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/phyx/src/pxrr"
+	$PXRR -t $OUTPUT_PATH/$PREFIX/nj_tree.newick -g $OUTGROUPS -o  $OUTPUT_PATH/$PREFIX/Rooted_NJ_tree.newick
+	echo "Tree rooted"
+	rm $OUTPUT_PATH/$PREFIX/nj_tree.newick
+fi
+
+
+# Usage example: ./Get_phylogenies.sh -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 26028063 -e 26030063 -f ../Data/group_Melinaea_marsaeus.txt -p1 marsaeus_rileyi -p2 marsaeus_phasiana -p3 mothone_messenina -p4 satevis_cydon -po ludovica -o ../Results -n test
