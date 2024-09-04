@@ -10,7 +10,7 @@ The whole pipeline can be run using the command below:
 sbatch ./Relate_launcher -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 23556241 -e 27031063 -f ../Inputs/Input_2_use.txt -t mothone,outgroup,isocomma,satevis,marsaeus_rileyi,marsaeus_phasiana,lilis,flavomacula --snps 25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282 -r outgroup -o ../Results/Melinaea_marsaeus -n mothone_ludovica_isocomma_satevis_marsaeus_rileyi_marsaeus_phasiana_lilis_flavomacula
 ```
 This pipeline will run the analysis and generate an "alignment plot" for the two species of interest around the cortex region.  
-It requires  [MUMmer](https://mummer.sourceforge.net/manual/) and [Biopython](http://biopython.org/) to work. 
+It requires  [SHAPEIT4](https://odelaneau.github.io/shapeit4/), [VCFTOOLS](https://vcftools.github.io), [BCFTOOLS](https://samtools.github.io/bcftools/) and [RELATE](https://myersgroup.github.io/relate/) to work. 
 
 ## 1) Extracting the regions to align from the reference genome
 
