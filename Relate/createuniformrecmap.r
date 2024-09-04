@@ -1,4 +1,4 @@
-# Written by Joana Meier, May-2017
+# Written by Joana Meier, May-2017 (Copied from conveniency from https://github.com/joanam/scripts/blob/master/createuniformrecmap.r)
 # usage: addRecombRates.r <vcffile> <linkage map>
 # Generates a map file in plink format for the positions provided in the vcf file
 # if no linkage map is available, just write "none" instead and a uniform linkage map will be produced
