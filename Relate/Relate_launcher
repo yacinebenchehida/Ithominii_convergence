@@ -10,16 +10,17 @@
 usage()
 {
 cat << EOF
-./Relate_laucher -v <vcf> -c <chromosome> -s <star_position> -e <end_position> -snps <list_snps> -f <pop_file> -t <list_taxa>  -o <path_output> -n <name> -h
+./Relate_laucher -v <vcf> -c <chromosome> -s <star_position> -e <end_position> --snps <list_snps> -f <pop_file> -t <list_taxa> -r <root_outgroup> -o <path_output> -n <name> -h
 
 OPTIONS:
   -v            Name of the vcf input
   -c		Contig/Scaffold/Chromosome name
   -s		Starting position in the VCF
   -e		End position in the VCF
-  -snps		List of SNPs for which a newick tree will be plotted (comma separated)
+  --snps	List of SNPs for which a newick tree will be plotted (comma separated)
   -f            Population file
   -t		List of taxa to analyses separated by a comma
+  -r		Outgroup name
   -o		Output folder  path
   -n            Prefix used for output files
   -h            usage information and help (this message)
@@ -28,7 +29,7 @@ exit 0
 }
 
 # Parse command-line options
-options=$(getopt -o v:c:s:e:f:t:o:n:h --long snps: -- "$@")
+options=$(getopt -o v:c:s:e:f:t:r:o:n:h --long snps: -- "$@")
 
 # Check for getopt errors
 if [ $? -ne 0 ]; then
@@ -70,6 +71,10 @@ do
 		  TAXA=$2
 		  shift 2
 		  ;;
+		-r)
+                  OUTGROUP=$2
+                  shift 2
+                  ;;
 		-o)
 		  OUTPUT_PATH=$2
 		  shift 2
@@ -92,7 +97,7 @@ do
 done
 
 # Check if all mandatory arguments are provided
-if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $OUTGROUP ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
 then
 	usage
 	exit 1
@@ -108,6 +113,7 @@ echo -e End:"${END}"
 echo -e SNPs:"${SNPS}"
 echo -e Population file:"${POP}"
 echo -e TAXA:"${TAXA}"
+echo -e OUTGROUP:"${OUTGROUP}"
 echo -e Output path:"${OUTPUT_PATH}"
 echo -e Prefix:"${PREFIX}"
 
@@ -166,7 +172,8 @@ echo PLINK LINKAGE MAP GENERATED
 
 # Create a Relate linkage map from the plink linkage map
 module load R/4.2.1-foss-2022a
-Rscript ./makeRelateMap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map.map
+#Rscript ./makeRelateMap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map.map
+Rscript ./createuniformrecmap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz LM.bed
 echo RELATE LINKAGE MAP GENERATED
 
 # Create inputs required by Relate
@@ -177,14 +184,38 @@ $RELATE/bin/RelateFileFormats \
                  -i $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed
 echo HAPS AND SAMPLE FILE GENERATED
 
+
+##################################################################
+# 7 - Use outgroup to set ancestral and derived alleles and flip #
+##################################################################
+# Find name outgroups and write --indv command
+indv_command=$(for i in $(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|grep $OUTGROUP|awk '{print $1}'); do echo -e "--indv $i"; done |perl -pe 's/\n/ /g')
+echo $indv_command
+
+# Get the allele frequencies of the outgroups 
+vcftools --gzvcf $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz  --freq $indv_command --out $OUTPUT_PATH/$PREFIX/outgroups
+echo ALLELE FREQUENCIES ESTIMATED FOR OUTGROUPS
+
+# Get ancestral alleles
+awk '{split($5,ref,":"); split($6,alt,":"); 
+     if(ref[2]>0.5) print ref[1]; else print alt[1]}' \
+     <(grep -v CHROM $OUTPUT_PATH/$PREFIX/outgroups.frq) > $OUTPUT_PATH/$PREFIX/ancestral.alleles
+
+#Swap the ancestral state in the haps file 
+awk 'FNR==NR {x2[NR] = $1; next}
+  {if(x2[FNR]==$5){ref=$5; alt=$4; $4=ref; $5=alt; 
+  for(i=6;i<=NF;i++) if($i==0) $i=1; else $i=0}; print}' \
+  $OUTPUT_PATH/$PREFIX/ancestral.alleles $OUTPUT_PATH/$PREFIX/"$PREFIX".haps > $OUTPUT_PATH/$PREFIX/"$PREFIX"_ancestral_state.haps
+
+
 #######################################################
-# 7 - Generate the pop label file with the sex column #
+# 8 - Generate the pop label file with the sex column #
 #######################################################
 (echo -e sample"\t"population"\t"group"\t"sex; awk '{print $0"\t"0}'  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt) > $OUTPUT_PATH/$PREFIX/"$PREFIX"_relate.poplabels
 echo RELATE POPLABELS READY
 
 ##################
-# 8 - Run RELATE #
+# 9 - Run RELATE #
 ##################
 cd  $OUTPUT_PATH/$PREFIX
 
@@ -192,14 +223,14 @@ $RELATE/bin/Relate \
                  --mode All \
                  -m 2.9e-9 \
                  -N 20000000 \
-                 --haps "$PREFIX".haps \
+                 --haps "$PREFIX"_ancestral_state.haps \
                  --sample "$PREFIX".sample \
-                 --map "$PREFIX"_linkage_map.map \
+                 --map "$PREFIX"*plink.map \
                  --seed 384 -o $PREFIX
 echo RELATE RUN
 
 #############################
-# 9 - Extract specific SNPs #
+# 10 - Extract specific SNPs #
 #############################
 # Get list of SNPs
 SNP=$(echo $SNPS|perl -pe 's/,/ /g')
@@ -223,7 +254,7 @@ done
 # Extract Relate results between the minimum and maximum SNPs position
 $RELATE/bin/RelateExtract \
                  --mode AncToNewick \
-                 --haps "$PREFIX".haps \
+                 --haps "$PREFIX"_ancestral_state.haps \
                  --sample "$PREFIX".sample \
                  --anc  "$PREFIX".anc \
                  --mut "$PREFIX".mut \
@@ -235,10 +266,9 @@ $RELATE/bin/RelateExtract \
 echo RELATE RESULTS EXTRACTED
 
 # Plot Tree for the specified SNPs
-
 for i in $SNP; do \
 $RELATE/scripts/TreeView/TreeView.sh \
-                --haps "$PREFIX".haps \
+                --haps "$PREFIX"_ancestral_state.haps \
                 --sample "$PREFIX".sample \
                 --anc "$PREFIX".anc \
                 --mut "$PREFIX".mut \
