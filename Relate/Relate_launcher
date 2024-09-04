@@ -20,7 +20,7 @@ OPTIONS:
   --snps	List of SNPs for which a newick tree will be plotted (comma separated)
   -f            Population file
   -t		List of taxa to analyses separated by a comma
-  -r		Outgroup name
+  -r		Outgroup name (taxa used to define the ancestral state)
   -o		Output folder  path
   -n            Prefix used for output files
   -h            usage information and help (this message)
@@ -117,6 +117,15 @@ echo -e OUTGROUP:"${OUTGROUP}"
 echo -e Output path:"${OUTPUT_PATH}"
 echo -e Prefix:"${PREFIX}"
 
+###################################
+# 2' - SOFTWARE LAODING AND PATHS #
+###################################
+module load  BCFtools/1.19-GCC-13.2.0
+module load R/4.2.1-foss-2022a
+module load VCFtools/0.1.16-GCC-11.2.0
+SHAPEIT="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/shapeit4/bin/shapeit4.2"
+RELATE="/mnt/scratch/projects/biol-specgen-2018/edd/software/relate_v1.2.1_x86_64_static"
+
 ##############################
 # 3 - Get the phenotype file #
 ##############################
@@ -134,7 +143,6 @@ echo POP FILE READY
 ###############################################
 # 4 - Get VCF for specific region/individuals #
 ###############################################
-module load  BCFtools/1.19-GCC-13.2.0
 bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
@@ -145,7 +153,6 @@ echo "SUBSETTED VCF FILE READY"
 # 5 - phase vcf #
 #################
 echo STARTING PHASING
-SHAPEIT="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/shapeit4/bin/shapeit4.2"
 $SHAPEIT --input $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz --region $CHR --output $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf 
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
@@ -157,8 +164,6 @@ rm $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
 #############################################################
 # 6 - Convert VCF to relate input files (*haps and *sample) #
 #############################################################
-RELATE="/mnt/scratch/projects/biol-specgen-2018/edd/software/relate_v1.2.1_x86_64_static"
-
 # Create VCF with human chromosome names
 echo -e $CHR"\t"1 > $OUTPUT_PATH/$PREFIX/chrom_names.txt
 bcftools annotate --rename-chrs $OUTPUT_PATH/$PREFIX/chrom_names.txt $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz
@@ -166,12 +171,10 @@ rm $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
 echo VCF RENAMED
 
 # Create a plink linkage map
-module load VCFtools/0.1.16-GCC-11.2.0
-vcftools --gzvcf $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz --out $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map --plink
-echo PLINK LINKAGE MAP GENERATED
+#vcftools --gzvcf $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz --out $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map --plink
+#echo PLINK LINKAGE MAP GENERATED
 
 # Create a Relate linkage map from the plink linkage map
-module load R/4.2.1-foss-2022a
 #Rscript ./makeRelateMap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map.map
 Rscript ./createuniformrecmap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz LM.bed
 echo RELATE LINKAGE MAP GENERATED
@@ -277,3 +280,8 @@ $RELATE/scripts/TreeView/TreeView.sh \
                 --years_per_gen 1 \
 		-o "$PREFIX"_"$i"
 done
+
+
+
+#Running example: ./Relate_launcher -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25956241 -e 26031063 -f ../Inputs/rich_data.txt -t mothone,lilis,satevis,marsaeus_rileyi --snps 25956270,25972495,25993654,25996297 -o . -n test
+#sbatch ./Relate_launcher -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 23556241 -e 27031063 -f ../Inputs/Input_2_use.txt -t mothone,ludovica,isocomma,satevis,marsaeus_rileyi,marsaeus_phasiana --snps 25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282 -r ludovica -o ../Results/Melinaea_marsaeus -n mothone_ludovica_isocomma_satevis_marsaeus_rileyi_marsaeus_phasiana
