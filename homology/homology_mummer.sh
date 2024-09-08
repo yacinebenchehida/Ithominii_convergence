@@ -90,7 +90,7 @@ do
 	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >> "${i}_genotype_phenotype_input.txt"
     done
 
-    rm  "Genotype_${i}.txt" $VCF "${i}_peak_pvalues.txt"
+    rm  "Genotype_${i}.txt" $VCF* "${i}_peak_pvalues.txt"
     echo -e "GENOTYPE PHENOTYPE FILE READY FOR  ${i}"
 done
 
@@ -150,4 +150,5 @@ done
 echo "START PLOTTING"  # Indicate that plotting is starting
 Rscript ./plotting_nucmer_windows_new.R $annotation  # Run R script for plotting
 mv *pdf $Results/mummer/sliding_windows_mapping/  # Move resulting PDFs to the results directory
+rm *_genotype_phenotype_input.txt
 echo -E "ALL SLIDING WINDOWS FINISHED"  # Indicate that all sliding window analysis is completed
