@@ -288,7 +288,15 @@ add_scale_to_plot <- function(p, data, size) {
  
  # Apply the function to each dataset, accumulating the y-offset as well
  layers_list <- lapply(1:length(Inputs), function(i) {
-   create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
+  layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
+  
+  # Modify layers_peak based on the iteration index
+  if (i != 1) {
+    layer_info$layers_peak <- layer_info$layers_peak[length(layer_info$layers_peak)]
+  }
+  print(layer_info$layers_peak)
+  
+  return(layer_info)
  })
  
  # Extract individual components from the list
