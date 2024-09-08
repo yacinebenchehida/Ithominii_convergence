@@ -68,8 +68,8 @@ do
     echo "PVALUES IN PEAK EXTRACTED"  # Indicate that p-values extraction is completed
 
     # Check if the VCF file already exists and remove it if it does
-    if [ -f "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf" ]; then
-    	rm "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf"
+    if [ -f "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz" ]; then
+    	rm "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
     fi
 
     # Extract VCF data for peaks and compress with bgzip and tabix
@@ -90,7 +90,7 @@ do
 	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >> "${i}_genotype_phenotype_input.txt"
     done
 
-    rm  "Genotype_${i}.txt" $VCF
+    rm  "Genotype_${i}.txt" $VCF "${i}_peak_pvalues.txt"
     echo -e "GENOTYPE PHENOTYPE FILE READY FOR  ${i}"
 done
 
