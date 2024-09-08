@@ -1,7 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(viridis)
-
+library(ggnewscale)
 
 dat = commandArgs(trailingOnly=TRUE)
 annot <- read.table(dat[1],sep="\t")
@@ -44,8 +44,6 @@ Spear_square_coeff <- function(sp){
         print(association)
         return(association)
 }
-
-Spear_square_coeff("Melinaea_menophilus")
 
 
 #######################################################################
@@ -191,6 +189,13 @@ for (i in unique(plotting_data$group)){
 
 to_colorise <- do.call(rbind,list)
 
+##########################################################
+# Get the Spearman coefficient for each SNPs in the peak #
+##########################################################
+target_spearman_values <- Spear_square_coeff(target_species)
+query_spearman_values <- Spear_square_coeff(query_species)
+
+
 ##################
 # set color code #
 ##################
@@ -203,8 +208,7 @@ if(gene=="Hyd. like"){
 }
 
 
-return(list(plotting_data, anno, to_colorise, color_code,query_species, target_species))
-
+return(list(plotting_data, anno, to_colorise, color_code,query_species, target_species,query_spearman_values, target_spearman_values))
 
 }
 
@@ -253,11 +257,14 @@ add_scale_to_plot <- function(p, data, size) {
    ready_data <- prepare_data(data_file, sp1, sp2, annot)
    plotting_data <- ready_data[[1]]
    anno <- ready_data[[2]]
+   anno <- anno[anno$V3!="peak",]
    to_colorise <- ready_data[[3]]
    color_code <- ready_data[[4]]
    query_species <- ready_data[[5]]
    target_species <- ready_data[[6]]
-   
+   spearman_query <- ready_data[[7]]
+   spearman_target <- ready_data[[8]]   
+
    # Adjust y-axis position for stacking
    plotting_data$y <- plotting_data$y + y_offset
    
@@ -270,8 +277,13 @@ add_scale_to_plot <- function(p, data, size) {
      geom_rect(data = anno[anno$V1 == unique(anno$V1)[1], ], aes(xmin = V4, xmax = V5, ymin = 3.052 + y_offset, ymax = 3.248 + y_offset, fill = V3), inherit.aes = FALSE),
      geom_polygon(data = to_colorise, aes(x = x, y = y + y_offset, group = group), color = "brown", fill = "brown")
    )
+
+   # Create a list of ggplot layers for peak (has to be separated because the list above contain discrete fill element while the peak will contain continuous (spearman) values
+   layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP , xmax = SNP+5, ymin = 0.948 + y_offset, ymax = 0.752 + y_offset, fill = Spearman), inherit.aes = FALSE),
+    geom_rect(data = spearman_query, aes(xmin = SNP , xmax = SNP+5, ymin = 3.052 + y_offset, ymax = 3.248 + y_offset, fill = Spearman),inherit.aes = FALSE))
+  
    
-   list(layers = layers, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
+   list(layers = layers, layers_peak = layers_peak, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
  }
  
  # Apply the function to each dataset, accumulating the y-offset as well
@@ -281,6 +293,7 @@ add_scale_to_plot <- function(p, data, size) {
  
  # Extract individual components from the list
  all_layers <- unlist(lapply(layers_list, function(x) x$layers), recursive = FALSE)
+ peak_layers <- unlist(lapply(layers_list, function(x) x$layers_peak), recursive = FALSE) 
  color_code <- layers_list[[1]]$color_code  # Assuming color code is the same across all layers
  y_values <- unlist(lapply(layers_list, function(x) x$y_values))
  species_labels <- unlist(lapply(layers_list, function(x) x$species_labels))
@@ -292,7 +305,9 @@ add_scale_to_plot <- function(p, data, size) {
    scale_fill_manual(values = color_code) +
    theme_minimal() +
    labs(x = NULL, y = NULL) +
-   theme(axis.text.x = element_blank())
+   theme(axis.text.x = element_blank()) +
+   new_scale_fill() +  
+   peak_layers + scale_fill_gradient(low = "white", high = "black")
 
 
 # Get data necessary to add scale 
