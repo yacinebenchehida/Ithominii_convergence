@@ -56,9 +56,9 @@ for i in ${species_list[@]}  # Loop through each species
 do
     echo $i  # Print the current species
     ref_genome="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$i"  # Path to reference genome for current species
-    Scaffold=$(grep $i $annotation | head -n 1 | awk -F"\t" '{print $2}')
-    starting_peak_position=$(grep -e $i $annotation | grep peak | awk -F"\t" '{print $4}')
-    ending_peak_position=$(grep -e $i $annotation | grep peak | awk -F"\t" '{print $5}')
+    Scaffold=$(grep -e $i $annotation | head -n 1 | awk -F"\t" '{print $2}')
+    starting_peak_position=$(grep -e "$i" peaks | grep -e "$gene_name" | awk -F"\t" '{print $3}')
+    ending_peak_position=$(grep -e $i peaks|grep -e $gene_name|awk -F"\t" '{print $4}')
     
     echo -e $Scaffold $starting_peak_position $ending_peak_position  # Print scaffold and peak positions
 
@@ -85,9 +85,13 @@ do
     bcftools query -f '%POS  [ %GT]\n'] $VCF > "Genotype_${i}.txt"
 
     #  Create a genotype phenotype input for each SNP and each gwas peak 
+    if [ -f "${i}_genotype_phenotype_input.txt" ]; then
+        rm "${i}_genotype_phenotype_input.txt"
+    fi
+
     cat "Genotype_${i}.txt"|while read line; do
 	SNP=$(echo $line|awk '{print $1}')
-	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >> "${i}_genotype_phenotype_input.txt"
+	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >>  "${i}_genotype_phenotype_input.txt"
     done
 
     rm  "Genotype_${i}.txt" $VCF* "${i}_peak_pvalues.txt"
@@ -107,8 +111,8 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
     echo -e "start\tend\tsubject\tsubjectLen\tsubjectStart\tsubjectEnd\tquery\tqueryLen\tqueryStart\tqueryEnd\tIdentity" > mapping.txt
     
     # Get size and scaffold information for the current species
-    SIZE=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta | awk '{print $2}')
-    SCAFFOLD=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta | awk '{print $1}')
+    SIZE=$(python3 -W ignore scaffold_size.py $Results/"$gene_name"_"$current".fasta | awk '{print $2}')
+    SCAFFOLD=$(python3 -W ignore scaffold_size.py $Results/"$gene_name"_"$current".fasta | awk '{print $1}')
     
     # Define window size and slide
     WINDOWS=1000
@@ -119,8 +123,8 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
     for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j = j + $SLIDE))
     do
         echo -E "$i $j $SIZE"
-        python selection_seq_interval_bis.py $Results/Cortex_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
-        nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" $Results/Cortex_"$next".fasta "$current"_"$i"_"$j".fasta
+        python selection_seq_interval_bis.py $Results/"$gene_name"_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
+        nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" $Results/"$gene_name"_"$next".fasta "$current"_"$i"_"$j".fasta
         show-coords -rcl tmp_"$i"_"$j".delta > tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt
         (cat tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt | grep -v "=====" | awk 'NR> 4' | perl -pe 's/ +/\t/g' | perl -pe 's/^\t//g' | perl -pe 's/\|\t//g' | awk '{print $12"\t"$8"\t"$1"\t"$2"\t"$13"\t"$9"\t"$3"\t"$4"\t"$7}') > tmp3
         awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping.txt
@@ -130,8 +134,8 @@ for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pair
     # Process the last window
     j=$SIZE
     echo -E "$i $j $SIZE"
-    python selection_seq_interval_bis.py $Results/Cortex_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
-    nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" $Results/Cortex_"$next".fasta "$current"_"$i"_"$j".fasta
+    python selection_seq_interval_bis.py $Results/"$gene_name"_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
+    nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" $Results/"$gene_name"_"$next".fasta "$current"_"$i"_"$j".fasta
     show-coords -rcl tmp_"$i"_"$j".delta > tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt
     (cat tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt | grep -v "=====" | awk 'NR> 4' | perl -pe 's/ +/\t/g' | perl -pe 's/^\t//g' | perl -pe 's/\|\t//g' | awk '{print $12"\t"$8"\t"$1"\t"$2"\t"$13"\t"$9"\t"$3"\t"$4"\t"$7}') > tmp3
     awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping.txt
