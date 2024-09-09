@@ -38,6 +38,10 @@ Spear_square_coeff <- function(sp) {
       current_snp <- current_snp[current_snp$geno != "..", ]
       current_snp$GenotypeNumeric <- as.numeric(factor(current_snp$geno, levels = c("00", "01", "11")))
       
+      if(sp=="Hypothyris_anastasia" | sp=="Mechanitis_messenoides"){
+        current_snp <- current_snp[current_snp$geno != "01", ]
+      }
+
       # Handle pheno_predominant_hetero
       pheno_table <- table(current_snp[current_snp$geno == "01", 3])
       if (length(pheno_table) > 0) {
@@ -87,9 +91,13 @@ Spear_square_coeff <- function(sp) {
   association <- do.call(rbind, list)
   colnames(association) <- c("SNP", "Spearman")
   association <- as.data.frame(association)
-  
+  if(sp=="Mechanitis_messenoides"){
+         print(na.omit(association))
+      }
   return(na.omit(association))
 }
+
+
 
 #######################################################################
 # Function that puts all the data in the right format before plotting #
@@ -241,9 +249,9 @@ to_colorise <- do.call(rbind,list)
   target_spearman_values <- Spear_square_coeff(target_species)
   # Calculate the difference (constant value to subtract) for target species
   differentielle_target <- abs(as.numeric(target_spearman_values[1, "SNP"]) - anno[anno$V1 == target_species & anno$V3 == "peak", 4])
-  
   # Adjust the SNP column for target species by subtracting 'differentielle_target'
   target_spearman_values$SNP <- as.numeric(target_spearman_values$SNP) - differentielle_target
+  target_spearman_values <- (target_spearman_values[order(target_spearman_values$Spearman), ])
 
   # For query species
   query_spearman_values <- Spear_square_coeff(query_species)
@@ -251,7 +259,8 @@ to_colorise <- do.call(rbind,list)
   differentielle_query <- abs(as.numeric(query_spearman_values[1, "SNP"]) - anno[anno$V1 == query_species & anno$V3 == "peak", 4])
   # Adjust the SNP column for query species by subtracting 'differentielle_query'
   query_spearman_values$SNP <- as.numeric(query_spearman_values$SNP) - differentielle_query
-  
+  query_spearman_values <- (query_spearman_values[order(query_spearman_values$Spearman), ])
+
 ##################
 # set color code #
 ##################
@@ -335,18 +344,16 @@ add_scale_to_plot <- function(p, data, size) {
    )
 
    # Create a list of ggplot layers for peak (has to be separated because the list above contain discrete fill element while the peak will contain continuous (spearman) values
-   layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP , xmax = SNP+100, ymin = 0.755 + y_offset, ymax = 0.945 + y_offset, fill = Spearman,alpha=Spearman), inherit.aes = FALSE),
-    geom_rect(data = spearman_query, aes(xmin = SNP , xmax = SNP+100, ymin = 3.055 + y_offset, ymax = 3.245 + y_offset, fill = Spearman,alpha=Spearman),inherit.aes = FALSE))
+   layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP , xmax = SNP+50, ymin = 0.755 + y_offset, ymax = 0.945 + y_offset, fill = Spearman), inherit.aes = FALSE),
+    geom_rect(data = spearman_query, aes(xmin = SNP , xmax = SNP+50, ymin = 3.055 + y_offset, ymax = 3.245 + y_offset, fill = Spearman),inherit.aes = FALSE))
   
    
    list(layers = layers, layers_peak = layers_peak, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
  }
-
-#########################################################################
-# Apply the layer function to each dataset, accumulating the y-offset as well #
-#########################################################################
+ 
+ # Apply the function to each dataset, accumulating the y-offset as well
  layers_list <- lapply(1:length(Inputs), function(i) {
-layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
+  layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
   
   # Modify layers_peak based on the iteration index
   if (i != 1) {
@@ -356,19 +363,16 @@ layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
   
   return(layer_info)
  })
-	
+ 
  # Extract individual components from the list
  all_layers <- unlist(lapply(layers_list, function(x) x$layers), recursive = FALSE)
  peak_layers <- unlist(lapply(layers_list, function(x) x$layers_peak), recursive = FALSE) 
  color_code <- layers_list[[1]]$color_code  # Assuming color code is the same across all layers
  y_values <- unlist(lapply(layers_list, function(x) x$y_values))
  species_labels <- unlist(lapply(layers_list, function(x) x$species_labels))
-
-########
-# Plot #
-########
-# Combine all layers into a single plot starting from an empty ggplot object 
-p <- ggplot() +
+ 
+ # Combine all layers into a single plot starting from an empty ggplot object
+ p <- ggplot() +
   all_layers +
   scale_y_continuous(breaks = y_values[c(1,3,5,6)], labels = species_labels[c(1,3,5,6)]) +
   scale_fill_manual(values = color_code) +
@@ -376,19 +380,19 @@ p <- ggplot() +
   labs(x = NULL, y = NULL) +
   theme(axis.text.x = element_blank()) + 
   new_scale_fill() +  
-  peak_layers + scale_fill_gradientn(colors==c("white","grey75","grey50","grey25","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) + guides(alpha = "none")
+  peak_layers + scale_fill_gradientn(colors=c("white","grey75","grey50","grey25","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) + guides(alpha = "none")
 
-				 
+
 # Get data necessary to add scale 
 for_scale <- create_layer(Inputs[1], y_offset = (1 - 1) * 2.3)
 
 # Print the final plot
 if(gene=="Hyd. like"){
-	pdf("plot_syntheny_windows_nucmer_optix.pdf",12,10)
+	 pdf("plot_syntheny_windows_nucmer_optix.pdf",12,10,colormodel = "rgb")
 	plot(add_scale_to_plot(p,for_scale$plotting_data, size = 20000))
 	dev.off()
 }else{
-	pdf("plot_syntheny_windows_nucmer_cortex.pdf",12,10)
+	 pdf("plot_syntheny_windows_nucmer_cortex.pdf",12,10,colormodel = "rgb")
 	plot(add_scale_to_plot(p, for_scale$plotting_data, size = 20000))
 	dev.off()
 }
