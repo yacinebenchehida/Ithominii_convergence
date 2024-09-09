@@ -45,7 +45,7 @@ In this study, the RELATE analyses were performed with four taxa, including an o
 
 The pipeline is divided into 7 steps.
 
-- Step1: Get the phenotype file
+- Step 1: Get the phenotype file
 
 ``` bash
 mkdir -p $OUTPUT_PATH/$PREFIX
@@ -60,7 +60,7 @@ for i in $SPECIES; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phe
 echo POP FILE READY
 ```
 
-- Step2: Get VCF for specific region/individuals
+- Step 2: Get VCF for specific region/individuals
 ``` bash
 bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
@@ -69,9 +69,9 @@ VCF="$OUTPUT_PATH/$PREFIX/$PREFIX.vcf.gz"
 echo "SUBSETTED VCF FILE READY"
 ```
 
-#################
-# 5 - phase vcf #
-#################
+- step 3: phase vcf 
+
+``` bash
 echo STARTING PHASING
 $SHAPEIT --input $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz --region $CHR --output $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf 
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf
@@ -80,10 +80,10 @@ echo PHASING PERFORMED
 
 VCF="$OUTPUT_PATH/$PREFIX/$PREFIX_phased.vcf"
 rm $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+```
+- step 4: Convert VCF to relate input files (generate the *haps and *sample)
 
-#############################################################
-# 6 - Convert VCF to relate input files (*haps and *sample) #
-#############################################################
+``` bash
 # Create VCF with human chromosome names
 echo -e $CHR"\t"1 > $OUTPUT_PATH/$PREFIX/chrom_names.txt
 bcftools annotate --rename-chrs $OUTPUT_PATH/$PREFIX/chrom_names.txt $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz
@@ -106,11 +106,11 @@ $RELATE/bin/RelateFileFormats \
                  --sample  $OUTPUT_PATH/$PREFIX/"$PREFIX".sample \
                  -i $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed
 echo HAPS AND SAMPLE FILE GENERATED
+```
 
+- step 5: Use outgroup to set ancestral and derived alleles and flip
 
-##################################################################
-# 7 - Use outgroup to set ancestral and derived alleles and flip #
-##################################################################
+``` bash
 # Find name outgroups and write --indv command
 indv_command=$(for i in $(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|grep $OUTGROUP|awk '{print $1}'); do echo -e "--indv $i"; done |perl -pe 's/\n/ /g')
 echo $indv_command
@@ -129,17 +129,18 @@ awk 'FNR==NR {x2[NR] = $1; next}
   {if(x2[FNR]==$5){ref=$5; alt=$4; $4=ref; $5=alt; 
   for(i=6;i<=NF;i++) if($i==0) $i=1; else $i=0}; print}' \
   $OUTPUT_PATH/$PREFIX/ancestral.alleles $OUTPUT_PATH/$PREFIX/"$PREFIX".haps > $OUTPUT_PATH/$PREFIX/"$PREFIX"_ancestral_state.haps
+```
 
-
-#######################################################
-# 8 - Generate the pop label file with the sex column #
-#######################################################
+- step 6: Generate the pop label file with the sex column
+  
+``` bash
 (echo -e sample"\t"population"\t"group"\t"sex; awk '{print $0"\t"0}'  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt) > $OUTPUT_PATH/$PREFIX/"$PREFIX"_relate.poplabels
 echo RELATE POPLABELS READY
+```
 
-##################
-# 9 - Run RELATE #
-##################
+step 7: Run RELATE
+
+``` bash
 cd  $OUTPUT_PATH/$PREFIX
 
 $RELATE/bin/Relate \
@@ -151,10 +152,11 @@ $RELATE/bin/Relate \
                  --map "$PREFIX"*plink.map \
                  --seed 384 -o $PREFIX
 echo RELATE RUN
+```
 
-#############################
-# 10 - Extract specific SNPs #
-#############################
+step 8: Extract results for the SNPs of interest
+
+``` bash
 # Get list of SNPs
 SNP=$(echo $SNPS|perl -pe 's/,/ /g')
 # Initialize min and max with an unset value
@@ -200,11 +202,4 @@ $RELATE/scripts/TreeView/TreeView.sh \
                 --years_per_gen 1 \
 		-o "$PREFIX"_"$i"
 done
-
-
-
-
-
-
-
-
+```
