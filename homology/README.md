@@ -42,13 +42,25 @@ python selection_seq_interval.py  fasta_reference_species2.fasta Scaffold_name s
 The starting and ending position are provided in a script looking like this: 
 ``` bash
 sp1  Gene1  start  end
-sp1  Gene1  start  end
+sp1  Gene2  start  end
+sp2  Gene1  start  end
 sp2  Gene2  start  end
-sp2  Gene2  start  end
-sp3  Gene3  start  end
-sp3  Gene3  start  end
-sp4  Gene4  start  end
-sp4  Gene4  start  end
+sp3  Gene1  start  end
+sp3  Gene2  start  end
+sp4  Gene1  start  end
+sp4  Gene2  start  end
+```
+
+For instance the file used to generate Figure 3:
+```bash
+Hypothyris_anastasia    Cortex  4327766   4328081
+Hypothyris_anastasia    Optix   9419647   9420916
+Melinaea_menophilus     Cortex  15215155  15224528
+Melinaea_menophilus     Optix   25912446  25922831
+Melinaea_mothone        Cortex  1385004   1398720
+Melinaea_marsaeus       Optix   25965242  26021063
+Mechanitis_messenoides  Cortex  6876850   6878893
+Mechanitis_messenoides  Optix   14398077  14472077
 ```
 
 ## 2) Run nucmer in sliding windows of 1000bp
@@ -159,21 +171,13 @@ Rscript ./plotting_nucmer_windows_new.R annotation_file
 
 The annotation file provided looks like this:
 ``` bash
-Mechanitis_messenoides  SUPER_5      Hyd.   like      14389413  14390685
-Mechanitis_messenoides  SUPER_5      peak   14398077  14472077  
-Mechanitis_messenoides  SUPER_5      Optix  14490502  14494053  
-Mechanitis_messenoides  SUPER_5      LRR1   14520006  14526959  
-Hypothyris_anastasia    scaffold_17  Hyd.   like      9462002   9463979
-Hypothyris_anastasia    scaffold_17  peak   9419647   9420916   
-Hypothyris_anastasia    scaffold_17  Optix  9353523   9356174   
-Hypothyris_anastasia    scaffold_17  LRR1   9311114   9317579   
-Melinaea_menophilus     SUPER_5      Hyd.   like      25896084  25897981
-Melinaea_menophilus     SUPER_5      peak   25912446  25922831  
-Melinaea_menophilus     SUPER_5      Optix  25994581  25998030  
-Melinaea_menophilus     SUPER_5      LRR1   26020125  26026682  
-Melinaea_marsaeus       SUPER_2      Hyd.   like      25967145  25968442
-Melinaea_marsaeus       SUPER_2      peak   25969242  26021063  
-Melinaea_marsaeus       SUPER_2      Optix  26062063  26065512  
-Melinaea_marsaeus       SUPER_2      LRR1   26089756  26096070 
+sp1  Scaffold/Chromosome Gene1  start  end
+sp1  Scaffold/Chromosome Gene2  start  end
+sp2  Scaffold/Chromosome Gene1  start  end
+sp2  Scaffold/Chromosome Gene2  start  end
+sp3  Scaffold/Chromosome Gene1  start  end
+sp3  Scaffold/Chromosome Gene2  start  end
+sp4  Scaffold/Chromosome Gene1  start  end
+sp4  Scaffold/Chromosome Gene2  start  end
 ```
 
