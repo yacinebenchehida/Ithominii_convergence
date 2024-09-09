@@ -16,35 +16,80 @@ if(gene=="Hyd. like"){
            "mapping_nucmer_sliding_windows_Mechanitis_messenoides_Melinaea_menophilus.txt")
 }
 
-
-
 ############################################################################
 # Function to assess if the Spearman coefficient for each SNPs in the peak #
 ############################################################################
-Spear_square_coeff <- function(sp){
-        geno_pheno <- read.table(paste(sp,"_genotype_phenotype_input.txt",sep=""))
-        colnames(geno_pheno) <- c("SNP","SAMPLE","pheno","geno")
-        list = list()
-        a = 1
-
-	for (i in unique(geno_pheno$SNP)){
-                current_snp <- geno_pheno[geno_pheno$SNP==i,]
-                current_snp <- current_snp[current_snp$pheno!=-9,]
-                current_snp$geno <- gsub("/|\\|", "", current_snp$geno)
-                current_snp$geno <- gsub("10", "01", current_snp$geno)
-                current_snp <- current_snp[current_snp$geno!="..",]
-                current_snp$GenotypeNumeric <- as.numeric(factor(current_snp$geno, levels = c("00", "01", "11")))
-                Spearman <- cor(current_snp$GenotypeNumeric, as.numeric(current_snp$pheno), method = "spearman")
-
-                list[[a]] = c(i, Spearman^2)
-                a = a + 1
+Spear_square_coeff <- function(sp) {
+  # Read the input file
+  geno_pheno <- read.table(paste(sp, "_genotype_phenotype_input.txt", sep=""))
+  colnames(geno_pheno) <- c("SNP", "SAMPLE", "pheno", "geno")
+  
+  # Initialize an empty list to store results
+  list <- list()
+  a <- 1
+  
+  # Iterate through each unique SNP
+  for (i in unique(geno_pheno$SNP)) {
+    result <- tryCatch({
+      current_snp <- geno_pheno[geno_pheno$SNP == i, ]
+      current_snp <- current_snp[current_snp$pheno != -9, ]
+      current_snp$geno <- gsub("/|\\|", "", current_snp$geno)
+      current_snp$geno <- gsub("10", "01", current_snp$geno)
+      current_snp <- current_snp[current_snp$geno != "..", ]
+      current_snp$GenotypeNumeric <- as.numeric(factor(current_snp$geno, levels = c("00", "01", "11")))
+      
+      # Handle pheno_predominant_hetero
+      pheno_table <- table(current_snp[current_snp$geno == "01", 3])
+      if (length(pheno_table) > 0) {
+        pheno_predominant_hetero <- names(which.max(pheno_table))
+      } else {
+        pheno_predominant_hetero <- NA
+      }
+      
+      # Handle genotype_predominant_hetero
+      tmp <- current_snp[current_snp$geno != "01" & current_snp$pheno == pheno_predominant_hetero, ]
+      if (nrow(tmp) > 0) {
+        genotype_predominant_hetero <- names(which.max(table(tmp$geno)))
+      } else {
+        genotype_predominant_hetero <- NA
+      }
+      
+      # Handle potential issues with assignment
+      if (!is.na(genotype_predominant_hetero) && length(genotype_predominant_hetero) > 0) {
+        subset_rows <- which(current_snp$geno == "01" & current_snp$pheno == pheno_predominant_hetero)
+        if (length(subset_rows) > 0) {
+          current_snp[subset_rows, "geno"] <- genotype_predominant_hetero
         }
-	association <- do.call(rbind,list)
-        colnames(association) <- c("SNP","Spearman")
-        print(association)
-        return(association)
+      }
+      
+      # Calculate Spearman correlation if valid
+      if (length(current_snp$GenotypeNumeric) > 1 && length(as.numeric(current_snp$pheno)) > 1) {
+        Spearman <- cor(current_snp$GenotypeNumeric, as.numeric(current_snp$pheno), method = "spearman")
+      } else {
+        Spearman <- NA
+      }
+      
+      # Return result
+      c(i, Spearman^2)
+      
+    }, error = function(e) {
+      # Handle errors and return NA or a placeholder
+      warning(paste("Error processing SNP", i, ":", e$message))
+      return(c(i, NA))
+    })
+    
+    # Store results
+    list[[a]] <- result
+    a <- a + 1
+  }
+  
+  # Combine results into a data frame
+  association <- do.call(rbind, list)
+  colnames(association) <- c("SNP", "Spearman")
+  association <- as.data.frame(association)
+  
+  return(na.omit(association))
 }
-
 
 #######################################################################
 # Function that puts all the data in the right format before plotting #
@@ -192,10 +237,21 @@ to_colorise <- do.call(rbind,list)
 ##########################################################
 # Get the Spearman coefficient for each SNPs in the peak #
 ##########################################################
-target_spearman_values <- Spear_square_coeff(target_species)
-query_spearman_values <- Spear_square_coeff(query_species)
+# For target species
+  target_spearman_values <- Spear_square_coeff(target_species)
+  # Calculate the difference (constant value to subtract) for target species
+  differentielle_target <- abs(as.numeric(target_spearman_values[1, "SNP"]) - anno[anno$V1 == target_species & anno$V3 == "peak", 4])
+  
+  # Adjust the SNP column for target species by subtracting 'differentielle_target'
+  target_spearman_values$SNP <- as.numeric(target_spearman_values$SNP) - differentielle_target
 
-
+  # For query species
+  query_spearman_values <- Spear_square_coeff(query_species)
+  # Calculate the difference (constant value to subtract) for query species
+  differentielle_query <- abs(as.numeric(query_spearman_values[1, "SNP"]) - anno[anno$V1 == query_species & anno$V3 == "peak", 4])
+  # Adjust the SNP column for query species by subtracting 'differentielle_query'
+  query_spearman_values$SNP <- as.numeric(query_spearman_values$SNP) - differentielle_query
+  
 ##################
 # set color code #
 ##################
@@ -271,7 +327,7 @@ add_scale_to_plot <- function(p, data, size) {
    # Create a list of ggplot layers for the current dataset
    layers <- list(
      geom_polygon(data = plotting_data, aes(x = x, y = y, group = group), color = "grey", fill = "black", alpha = 0.4),
-     geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == target_species, 5]), ymin = 0.95 + y_offset, ymax = 0.75 + y_offset), color = "black", fill = "white"),
+     geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == target_species, 5]), ymin = 0.75 + y_offset, ymax = 0.95 + y_offset), color = "black", fill = "white"),
      geom_rect(data = anno[anno$V1 == unique(anno$V1)[2], ], aes(xmin = V4, xmax = V5, ymin = 0.948 + y_offset, ymax = 0.752 + y_offset, fill = V3), inherit.aes = FALSE),
      geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == query_species, 5]), ymin = 3.05 + y_offset, ymax = 3.25 + y_offset), color = "black", fill = "white"),
      geom_rect(data = anno[anno$V1 == unique(anno$V1)[1], ], aes(xmin = V4, xmax = V5, ymin = 3.052 + y_offset, ymax = 3.248 + y_offset, fill = V3), inherit.aes = FALSE),
@@ -279,16 +335,18 @@ add_scale_to_plot <- function(p, data, size) {
    )
 
    # Create a list of ggplot layers for peak (has to be separated because the list above contain discrete fill element while the peak will contain continuous (spearman) values
-   layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP , xmax = SNP+5, ymin = 0.948 + y_offset, ymax = 0.752 + y_offset, fill = Spearman), inherit.aes = FALSE),
-    geom_rect(data = spearman_query, aes(xmin = SNP , xmax = SNP+5, ymin = 3.052 + y_offset, ymax = 3.248 + y_offset, fill = Spearman),inherit.aes = FALSE))
+   layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP , xmax = SNP+100, ymin = 0.755 + y_offset, ymax = 0.945 + y_offset, fill = Spearman,alpha=Spearman), inherit.aes = FALSE),
+    geom_rect(data = spearman_query, aes(xmin = SNP , xmax = SNP+100, ymin = 3.055 + y_offset, ymax = 3.245 + y_offset, fill = Spearman,alpha=Spearman),inherit.aes = FALSE))
   
    
    list(layers = layers, layers_peak = layers_peak, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
  }
- 
- # Apply the function to each dataset, accumulating the y-offset as well
+
+#########################################################################
+# Apply the layer function to each dataset, accumulating the y-offset as well #
+#########################################################################
  layers_list <- lapply(1:length(Inputs), function(i) {
-  layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
+layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
   
   # Modify layers_peak based on the iteration index
   if (i != 1) {
@@ -298,26 +356,29 @@ add_scale_to_plot <- function(p, data, size) {
   
   return(layer_info)
  })
- 
+	
  # Extract individual components from the list
  all_layers <- unlist(lapply(layers_list, function(x) x$layers), recursive = FALSE)
  peak_layers <- unlist(lapply(layers_list, function(x) x$layers_peak), recursive = FALSE) 
  color_code <- layers_list[[1]]$color_code  # Assuming color code is the same across all layers
  y_values <- unlist(lapply(layers_list, function(x) x$y_values))
  species_labels <- unlist(lapply(layers_list, function(x) x$species_labels))
- 
- # Combine all layers into a single plot starting from an empty ggplot object
- p <- ggplot() +
-   all_layers +
-   scale_y_continuous(breaks = y_values[c(1,3,5,6)], labels = species_labels[c(1,3,5,6)]) +
-   scale_fill_manual(values = color_code) +
-   theme_minimal() +
-   labs(x = NULL, y = NULL) +
-   theme(axis.text.x = element_blank()) +
-   new_scale_fill() +  
-   peak_layers + scale_fill_gradient(low = "white", high = "black")
 
+########
+# Plot #
+########
+# Combine all layers into a single plot starting from an empty ggplot object 
+p <- ggplot() +
+  all_layers +
+  scale_y_continuous(breaks = y_values[c(1,3,5,6)], labels = species_labels[c(1,3,5,6)]) +
+  scale_fill_manual(values = color_code) +
+  theme_minimal() +
+  labs(x = NULL, y = NULL) +
+  theme(axis.text.x = element_blank()) + 
+  new_scale_fill() +  
+  peak_layers + scale_fill_gradientn(colors=c("white","grey95","grey50","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) + guides(alpha = "none")
 
+				 
 # Get data necessary to add scale 
 for_scale <- create_layer(Inputs[1], y_offset = (1 - 1) * 2.3)
 
