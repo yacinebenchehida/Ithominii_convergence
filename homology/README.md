@@ -30,12 +30,23 @@ The pipeline is divided into few blocks of commands:
 
 ## 1) Extracting the regions to align from the reference genome
 
-The command below extracts the genomics regions we want to align from the two species we want to compare. This step uses the python script selection_seq_interval.py. 
+The command below extracts the genomics regions around the peak of two species of interests.
 
 ``` bash
 python selection_seq_interval.py  fasta_reference_species1.fasta Scaffold_name starting_position_species1 end_position_species1 Species1_name > Species1_name.fasta
 python selection_seq_interval.py  fasta_reference_species2.fasta Scaffold_name starting_position_species2 end_position_species2 Species2_name > Species2_name.fasta
+```
 
+The starting and ending position are provided in a script looking like this: 
+``` bash
+Hypothyris_anastasia    Cortex  4327766   4328081
+Hypothyris_anastasia    Optix   9419647   9420916
+Melinaea_menophilus     Cortex  15215155  15224528
+Melinaea_menophilus     Optix   25912446  25922831
+Melinaea_mothone        Cortex  1385004   1398720
+Melinaea_marsaeus       Optix   25965242  26021063
+Mechanitis_messenoides  Cortex  6876850   6878893
+Mechanitis_messenoides  Optix   14398077  14472077
 ```
 
 ## 2) Run nucmer in sliding windows of 1000bp
@@ -60,7 +71,7 @@ for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j=j+$SLIDE))
 		awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping_nucmer_sliding_windows_sp1_sp2.txt # Add window number to the final output
 done
 
-# Last incomplete windows (smaller than 1000bp)
+# Perform the same on the last incomplete windows (smaller than 1000bp)
 j=$SIZE
 python selection_seq_interval_bis.py Species1_name.fasta Scaffold_name $i $j > sp1_"$i"_"$j".fasta # get a fasta for a window of 1000bp
 nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" sp2.fasta sp1_"$i"_"$j".fasta # align the window of 1000bp against sp2
