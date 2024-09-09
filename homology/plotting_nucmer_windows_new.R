@@ -376,7 +376,7 @@ p <- ggplot() +
   labs(x = NULL, y = NULL) +
   theme(axis.text.x = element_blank()) + 
   new_scale_fill() +  
-  peak_layers + scale_fill_gradientn(colors=c("white","grey95","grey50","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) + guides(alpha = "none")
+  peak_layers + scale_fill_gradientn(colors==c("white","grey75","grey50","grey25","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) + guides(alpha = "none")
 
 				 
 # Get data necessary to add scale 
