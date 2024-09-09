@@ -25,4 +25,4 @@ else
     ./blast_homology.sh $args_without_last; homology.sh $args_without_last 
 fi
 
-# USAGE: ./master_script.sh Mechanitis_messenoides Melinaea_menophilus Hypothyris_anastasia (empty (both methods)|minimap2|blast|mummer)
+# USAGE: ./master_script.sh Mechanitis_messenoides Melinaea_menophilus Hypothyris_anastasia Cortex (empty (both methods)|minimap2|blast|mummer)
