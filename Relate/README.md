@@ -43,7 +43,7 @@ In this study, the RELATE analyses were performed with four taxa, including an o
 
 ## 4) Running the pipeline
 
-The pipeline is divided into 7 steps.
+The pipeline is divided into 8 steps.
 
 - Step 1: Get the phenotype file
 
