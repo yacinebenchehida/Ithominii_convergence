@@ -28,6 +28,8 @@ The pipeline is divided into few blocks of commands:
 3) Get the phenotype and genotype at each SNP in the GWAS (used to estimate the squared Spearman coefficients)
 4) Plot the results
 
+All these four steps are implemented in the script homology_mummer.sh.   
+
 ## 1) Extracting the regions to align from the reference genome
 
 The command below extracts the genomics regions around the peak of two species of interests.
@@ -39,14 +41,14 @@ python selection_seq_interval.py  fasta_reference_species2.fasta Scaffold_name s
 
 The starting and ending position are provided in a script looking like this: 
 ``` bash
-Hypothyris_anastasia    Cortex  4327766   4328081
-Hypothyris_anastasia    Optix   9419647   9420916
-Melinaea_menophilus     Cortex  15215155  15224528
-Melinaea_menophilus     Optix   25912446  25922831
-Melinaea_mothone        Cortex  1385004   1398720
-Melinaea_marsaeus       Optix   25965242  26021063
-Mechanitis_messenoides  Cortex  6876850   6878893
-Mechanitis_messenoides  Optix   14398077  14472077
+sp1  Gene1  start  end
+sp1  Gene1  start  end
+sp2  Gene2  start  end
+sp2  Gene2  start  end
+sp3  Gene3  start  end
+sp3  Gene3  start  end
+sp4  Gene4  start  end
+sp4  Gene4  start  end
 ```
 
 ## 2) Run nucmer in sliding windows of 1000bp
@@ -96,11 +98,82 @@ nucmer --mum -c 20 -b 500 -l 10 --maxgap 500
 
 ## 3) Get the phenotype and genotype at each SNP in the GWAS (used to estimate the squared Spearman coefficients)
 
+The  block of commands below was applied to each species. It:
+1) Finds the scaffold, start and ending positions for each gwas peak region
+2) Generates an indexed VCF file for each gwas peak region
+3) Extracts the phenotype of each sample in the VCF
+4) Extracts the genotype all SNPs present in the gwas peak region
+5) Puts together all the information in a single text file used in R to generate the plot  
+
+``` bash
+for i in ${species_list[@]}  # Loop through each species
+do
+    echo $i  # Print the current species
+    ref_genome="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$i"  # Path to reference genome for current species
+    Scaffold=$(grep -e $i $annotation | head -n 1 | awk -F"\t" '{print $2}')
+    starting_peak_position=$(grep -e "$i" peaks | grep -e "$gene_name" | awk -F"\t" '{print $3}')
+    ending_peak_position=$(grep -e $i peaks|grep -e $gene_name|awk -F"\t" '{print $4}')
+    
+    echo -e $Scaffold $starting_peak_position $ending_peak_position  # Print scaffold and peak positions
+
+    # Check if the VCF file already exists and remove it if it does
+    if [ -f "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz" ]; then
+        rm "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
+    fi
+
+    # Extract VCF data for peaks and compress with bgzip and tabix
+    bcftools view --regions $Scaffold:$starting_peak_position-$ending_peak_position $VCF_PATH/$i/*.vcf.gz > "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf"
+    bgzip "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf"
+    tabix "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
+    VCF="${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
+    echo -e "VCF ready for ${i}"
+
+    # Get genotypes for each samples at each SNP
+    PHENOTYPE="${PHENOTYPE_PATH}/${i}.txt"
+    NUMB_SAMPLES=$(cat $PHENOTYPE|wc -l)
+    bcftools query -f '%POS  [ %GT]\n'] $VCF > "Genotype_${i}.txt"
+
+    #  Create a genotype phenotype input for each SNP and each gwas peak 
+    if [ -f "${i}_genotype_phenotype_input.txt" ]; then
+        rm "${i}_genotype_phenotype_input.txt"
+    fi
+
+    cat "Genotype_${i}.txt"|while read line; do
+        SNP=$(echo $line|awk '{print $1}')
+        paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >>  "${i}_genotype_phenotype_input.txt"
+    done
+
+    #  Remove temporary files
+    rm  "Genotype_${i}.txt" $VCF* "${i}_peak_pvalues.txt"
+    echo -e "GENOTYPE PHENOTYPE FILE READY FOR  ${i}"
+done
+```
 
 ## 4) Plot the alignment plots
 
-Plots summarising the results along the regions of interest were plotted in R using the script plotting_nucmer_windows.R.
+The last setp is to nucmer alignments results along the regions of interest. This step uses R script plotting_nucmer_windows_new.R. It runs like this:
 
 ``` bash
-Rscript ./plotting_nucmer_windows.R mapping_nucmer_sliding_windows_sp1_sp2.txt sp1 sp2
+Rscript ./plotting_nucmer_windows_new.R annotation_file
 ```
+
+The annotation file provided looks like this:
+``` bash
+Mechanitis_messenoides  SUPER_5      Hyd.   like      14389413  14390685
+Mechanitis_messenoides  SUPER_5      peak   14398077  14472077  
+Mechanitis_messenoides  SUPER_5      Optix  14490502  14494053  
+Mechanitis_messenoides  SUPER_5      LRR1   14520006  14526959  
+Hypothyris_anastasia    scaffold_17  Hyd.   like      9462002   9463979
+Hypothyris_anastasia    scaffold_17  peak   9419647   9420916   
+Hypothyris_anastasia    scaffold_17  Optix  9353523   9356174   
+Hypothyris_anastasia    scaffold_17  LRR1   9311114   9317579   
+Melinaea_menophilus     SUPER_5      Hyd.   like      25896084  25897981
+Melinaea_menophilus     SUPER_5      peak   25912446  25922831  
+Melinaea_menophilus     SUPER_5      Optix  25994581  25998030  
+Melinaea_menophilus     SUPER_5      LRR1   26020125  26026682  
+Melinaea_marsaeus       SUPER_2      Hyd.   like      25967145  25968442
+Melinaea_marsaeus       SUPER_2      peak   25969242  26021063  
+Melinaea_marsaeus       SUPER_2      Optix  26062063  26065512  
+Melinaea_marsaeus       SUPER_2      LRR1   26089756  26096070 
+```
+
