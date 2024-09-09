@@ -1,99 +1,158 @@
 #!/bin/bash
 
 ##########################
-# load necessary modules #
+# Load necessary modules #
 ##########################
-module load R/4.2.1-foss-2022a
-module load Biopython/1.81-foss-2022b
-module load minimap2/2.26-GCCcore-12.2.0
+module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
+module load Biopython/1.81-foss-2022b # Load Biopython module for biological computation
+module load MUMmer/3.23-GCCcore-9.3.0 # Load MUMmer module for genome alignment
+module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
+
+##########################
+# Capture the last argument as gene_name #
+##########################
+gene_name=${@: -1}  # Get the last argument passed to the script as the gene name
+species_list=(${@:1:$(($#-1))})  # Get all arguments except the last one (the species list)
+
+echo "Gene name: $gene_name"          # Print the gene name
+echo "Species: ${species_list[@]}"    # Print the list of species
 
 ##########################
 # Set useful directories #
 ##########################
-Results="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Results"
-data_gwas="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS"
-Inputs="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs"
-annotation="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs/annotation.txt"
+Results="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Results"  # Directory for results
+Inputs="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs"    # Directory for input files
+annotation="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/homology/Inputs/${gene_name}_annotation.txt"  # Path to annotation file
+GWAS_RESULTS_PATH="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/${gene_name}/GWAS"  # Path to GWAS results
+VCF_PATH="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results"  # Path to VCF files
+PHENOTYPE_PATH="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/${gene_name}/Phenotypes"
 
 ############################################################################################
 # Find top SNPs in the GWAS and create a fasta based on a windows of 150kb around the peak #
 ############################################################################################
-for i in $@
+for i in ${species_list[@]}  # Loop through each species in the species list
 do
-	ref_genome="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$i"
-	fasta_sequence=$(ls $ref_genome|grep -E "*.fa$|*.fasta$")
-	#cat $data_gwas/"$i".txt |awk '$4 < 0.000000001'|LC_ALL=C sort -g -k 4|head -n 3|awk '{print $1"\t"$3"\t"$4}' > top_peak_positions_"$i".txt	
-	#values=$(Rscript position_extra.R top_peak_positions_"$i".txt)
-	Scaffold=$(cat /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/annotation_info/annotation.txt|grep $i|head -n 1|awk -F"\t" '{print $2}')
-	starting_position=$(python3 ./find_min_max.py $annotation $i|awk '{print $1}')
-	ending_position=$(python3 ./find_min_max.py $annotation $i|awk '{print $2}')
-	echo $Scaffold $starting_position $ending_position
-	python selection_seq_interval.py  $ref_genome/$fasta_sequence $Scaffold $starting_position $ending_position $i> $Results/Cortex_"$i".fasta
-	#rm top_peak_positions_"$i".txt
+    echo $i  # Print the current species
+    ref_genome="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$i"  # Path to reference genome for current species
+    fasta_sequence=$(ls $ref_genome | grep -E "*.fa$|*.fasta$")  # Find fasta files in the reference genome directory
+    
+    # Extract scaffold and peak positions for the current species
+    Scaffold=$(grep $i $annotation | head -n 1 | awk -F"\t" '{print $2}')
+    starting_position=$(python3 ./find_min_max.py $annotation $i | awk '{print $1}')
+    ending_position=$(python3 ./find_min_max.py $annotation $i | awk '{print $2}')
+    
+    echo $Scaffold $starting_position $ending_position  # Print scaffold and peak positions
+    
+    # Create fasta file with sequences from the defined window around the peak
+    python selection_seq_interval.py $ref_genome/$fasta_sequence $Scaffold $starting_position $ending_position $i > $Results/"$gene_name"_"$i".fasta
 done
 
-echo FOUND PEAKS
-#module purge
-#module load BLAST+/2.14.0-gompi-2022b
-#makeblastdb -in Cortex_"$i".fasta -dbtype nucl -input_type fasta -out $i -title $i
+echo "FOUND PEAKS"  # Indicate that peak finding is completed
 
-##############################
-# Homology based on minimap2 #
-##############################
-######## 1)based on the asm20 algorithm that compares genome on the bases of a divergence up to 20%
-echo START ASM
-values=("$@")
+###################################################################################
+# Get Spearman square coefficient for each species for all SNPs in the GWAS peak #
+###################################################################################
+for i in ${species_list[@]}  # Loop through each species
+do
+    echo $i  # Print the current species
+    ref_genome="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/0_Data/reference_genomes/$i"  # Path to reference genome for current species
+    Scaffold=$(grep -e $i $annotation | head -n 1 | awk -F"\t" '{print $2}')
+    starting_peak_position=$(grep -e "$i" peaks | grep -e "$gene_name" | awk -F"\t" '{print $3}')
+    ending_peak_position=$(grep -e $i peaks|grep -e $gene_name|awk -F"\t" '{print $4}')
+    
+    echo -e $Scaffold $starting_peak_position $ending_peak_position  # Print scaffold and peak positions
 
-for ((i = 0; i < ${#values[@]} -1; i += 1)); do # Iterate through adjacent pairs
-	current="${values[i]}"
-	next="${values[i + 1]}"
-	echo -e "$current\t$next"
-	mkdir -p $Results/minimap2/asm20
-	echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tDirection\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tMatchingBases\tMatchLen\tQuality" >  $Results/minimap2/asm20/mapping_minimap2_asm20_"$current"_"$next".txt
-	minimap2 -x asm20  $Results/Cortex_"$current".fasta  $Results/Cortex_"$next".fasta|cut -f 1-12 >  $Results/minimap2/asm20/mapping_minimap2_asm20_"$current"_"$next".txt
-	Rscript plot_syntheny_asm.R $Results/minimap2/asm20/mapping_minimap2_asm20_"$current"_"$next".txt $current $next
-	mv *pdf $Results/minimap2/asm20
-	echo -e "RAN MINIMAP2 BASED ON ASM20 $current $next"
-done
-echo ASM DONE
+    # Extract p-values for peaks from GWAS results
+    awk -v scaffold="$Scaffold" -v start="$starting_peak_position" -v end="$ending_peak_position" \
+        '$1 == scaffold && $3 >= start && $3 <= end {print $3"\t"$4}' "$GWAS_RESULTS_PATH/${i}.txt" > "${i}_peak_pvalues.txt"
+    echo "PVALUES IN PEAK EXTRACTED"  # Indicate that p-values extraction is completed
 
-######## 2) based on the reads mapping algorithm of minimap2. This part works in a sliding windows of 1 kb. 
-values=("$@")
+    # Check if the VCF file already exists and remove it if it does
+    if [ -f "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz" ]; then
+    	rm "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
+    fi
 
-for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pairsS
-	# Define the pair of species that are going to be analyses in this loop
-	current="${values[k]}"
-        next="${values[k + 1]}"
-	echo -e "START SLIDING WINDOWS $current $next"
-	echo -e "start\tend\tquery\tqueryLen\tqueryStart\tqueryEnd\tDirection\tSubject\tSubjectLen\tSubjectStart\tSubjectEnd\tMatchingBases\tMatchLen\tQuality" >  mapping.txt
-	# Define the size of the size genomic interval and the scaffold name that is going to be plotted
-	SIZE=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta|awk '{print $2}')
-	SCAFFOLD=$(python3 -W ignore scaffold_size.py $Results/Cortex_"$current".fasta|awk '{print $1}')
-	# Define the window slide and the slide (here without overlap so both have the same size)
-	WINDOWS=1000
-	SLIDE=1000
-	echo $SIZE
+    # Extract VCF data for peaks and compress with bgzip and tabix
+    bcftools view --regions $Scaffold:$starting_peak_position-$ending_peak_position $VCF_PATH/$i/*.vcf.gz > "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf"
+    bgzip "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf"
+    tabix "${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
+    VCF="${i}_${Scaffold}_${starting_peak_position}-${ending_peak_position}.vcf.gz"
+    echo -e "VCF ready for ${i}"
 
- 	# Loop for each pair of species in the define scaffold over windows of the same size
-	for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j=j+$SLIDE)) 
-	do
-		python selection_seq_interval_bis.py $Results/Cortex_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
-		RES=$(minimap2 -x sr  $Results/Cortex_"$next".fasta "$current"_"$i"_"$j".fasta|head -n 1|cut -f 1-12)
-		echo -e $i"\t"$j"\t"$RES |perl -pe 's/ /\t/g' >> mapping.txt
-		rm "$current"_"$i"_"$j".fasta
-	done
+    # Get genotypes for each samples at each SNP
+    PHENOTYPE="${PHENOTYPE_PATH}/${i}.txt"
+    NUMB_SAMPLES=$(cat $PHENOTYPE|wc -l)
+    bcftools query -f '%POS  [ %GT]\n'] $VCF > "Genotype_${i}.txt"
 
-	# Combine the results
-	mkdir -p $Results/minimap2/sliding_windows_mapping
-	cat mapping.txt|awk 'NF > 2' > $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt
-	rm mapping.txt
+    #  Create a genotype phenotype input for each SNP and each gwas peak 
+    if [ -f "${i}_genotype_phenotype_input.txt" ]; then
+        rm "${i}_genotype_phenotype_input.txt"
+    fi
 
-	#Plot the results
-	Rscript ./Plotting_homology_new.R  $Results/minimap2/sliding_windows_mapping/mapping_minimap2_sliding_windows_"$current"_"$next".txt $current $next
-	# Remove pointless files
-	#rm minimap_plot.txt
-	mv *pdf $Results/minimap2/sliding_windows_mapping/
-	echo -E "END SLIDING WINDOWS $current $next"
+    cat "Genotype_${i}.txt"|while read line; do
+	SNP=$(echo $line|awk '{print $1}')
+	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >>  "${i}_genotype_phenotype_input.txt"
+    done
+
+    #rm  "Genotype_${i}.txt" $VCF* "${i}_peak_pvalues.txt"
+    echo -e "GENOTYPE PHENOTYPE FILE READY FOR  ${i}"
 done
 
-echo -E "ALL SLIDING WINDOWS FINISHED"
+
+########################################
+# Run Nucmer in sliding windows of 1kb #
+########################################
+values=("${species_list[@]}")  # Prepare a list of species for sliding window comparisons
+
+for ((k = 0; k < ${#values[@]} - 1; k += 1)); do # Iterate through adjacent pairs of species
+    current="${values[k]}"
+    next="${values[k + 1]}"
+    echo -e "START SLIDING WINDOWS $current $next"
+    echo -e "start\tend\tsubject\tsubjectLen\tsubjectStart\tsubjectEnd\tquery\tqueryLen\tqueryStart\tqueryEnd\tIdentity" > mapping.txt
+    
+    # Get size and scaffold information for the current species
+    SIZE=$(python3 -W ignore scaffold_size.py $Results/"$gene_name"_"$current".fasta | awk '{print $2}')
+    SCAFFOLD=$(python3 -W ignore scaffold_size.py $Results/"$gene_name"_"$current".fasta | awk '{print $1}')
+    
+    # Define window size and slide
+    WINDOWS=1000
+    SLIDE=1000
+    echo $SIZE $current
+    
+    # Loop over sliding windows for the given scaffold
+    for ((i = 1, j = $WINDOWS; i < $SIZE && j < $SIZE; i = j + 1, j = j + $SLIDE))
+    do
+        echo -E "$i $j $SIZE"
+        python selection_seq_interval_bis.py $Results/"$gene_name"_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
+        nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" $Results/"$gene_name"_"$next".fasta "$current"_"$i"_"$j".fasta
+        show-coords -rcl tmp_"$i"_"$j".delta > tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt
+        (cat tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt | grep -v "=====" | awk 'NR> 4' | perl -pe 's/ +/\t/g' | perl -pe 's/^\t//g' | perl -pe 's/\|\t//g' | awk '{print $12"\t"$8"\t"$1"\t"$2"\t"$13"\t"$9"\t"$3"\t"$4"\t"$7}') > tmp3
+        awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping.txt
+        rm "$current"_"$i"_"$j".fasta tmp*
+    done
+
+    # Process the last window
+    j=$SIZE
+    echo -E "$i $j $SIZE"
+    python selection_seq_interval_bis.py $Results/"$gene_name"_"$current".fasta $SCAFFOLD $i $j > "$current"_"$i"_"$j".fasta
+    nucmer --mum -c 20 -b 500 -l 10 --maxgap 500 -p tmp_"$i"_"$j" $Results/"$gene_name"_"$next".fasta "$current"_"$i"_"$j".fasta
+    show-coords -rcl tmp_"$i"_"$j".delta > tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt
+    (cat tmp_nucmer_"$current"_"$next"_"$i"_"$j".txt | grep -v "=====" | awk 'NR> 4' | perl -pe 's/ +/\t/g' | perl -pe 's/^\t//g' | perl -pe 's/\|\t//g' | awk '{print $12"\t"$8"\t"$1"\t"$2"\t"$13"\t"$9"\t"$3"\t"$4"\t"$7}') > tmp3
+    awk -v i="$i" -v j="$j" '{print i "\t" j "\t" $0}' tmp3 >> mapping.txt
+    rm "$current"_"$i"_"$j".fasta tmp*
+
+    # Combine the results
+    mkdir -p $Results/mummer/sliding_windows_mapping
+    cat mapping.txt | awk 'NF > 2' > $Results/mummer/sliding_windows_mapping/mapping_nucmer_sliding_windows_"$current"_"$next".txt
+    rm mapping.txt
+    echo -E "END SLIDING WINDOWS NUCMER $current $next"
+done
+
+#######################
+# plot nucmer results #
+#######################
+echo "START PLOTTING"  # Indicate that plotting is starting
+Rscript ./plotting_nucmer_windows_new.R $annotation  # Run R script for plotting
+mv *pdf $Results/mummer/sliding_windows_mapping/  # Move resulting PDFs to the results directory
+#rm *_genotype_phenotype_input.txt
+echo -E "ALL SLIDING WINDOWS FINISHED"  # Indicate that all sliding window analysis is completed
