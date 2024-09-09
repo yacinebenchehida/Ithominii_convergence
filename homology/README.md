@@ -7,10 +7,26 @@ This folder contains all the scripts used to perform the peaks alignment in slid
 The whole pipeline can be run using the command below: 
 
 ``` bash
-./master.sh species1 species2 species3 species 4 cortex mummer
+./master.sh species1 species2 species3 species4 cortex mummer
 ```
+
+The plots present in Figure 3 can be generated using this command:
+``` bash
+# Cortex
+./master.sh Mechanitis_messenoides Melinaea_menophilus Melinaea_mothone Hypothyris_anastasia Cortex mummer
+
+# Optix
+./master.sh Mechanitis_messenoides Melinaea_menophilus Melinaea_marsaeus Hypothyris_anastasia Optix mummer
+```
+
 This pipeline will run the analysis and generate an "alignment plot" for the two species of interest around the cortex region.  
 It requires  [MUMmer](https://mummer.sourceforge.net/manual/) and [Biopython](http://biopython.org/) to work. 
+
+The pipeline is divided into few blocks of commands:
+1) Extracting the peak regions of each species from the reference genome
+2) Run Nucmer in sliding windows of 1kb
+3) Get the phenotype and genotype at each SNP in the GWAS (used to estimate the squared Spearman coefficient)
+4) Plot the results
 
 ## 1) Extracting the regions to align from the reference genome
 
