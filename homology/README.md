@@ -25,7 +25,7 @@ It requires  [MUMmer](https://mummer.sourceforge.net/manual/) and [Biopython](ht
 The pipeline is divided into few blocks of commands:
 1) Extracting the peak regions of each species from the reference genome
 2) Run Nucmer in sliding windows of 1kb
-3) Get the phenotype and genotype at each SNP in the GWAS (used to estimate the squared Spearman coefficient)
+3) Get the phenotype and genotype at each SNP in the GWAS (used to estimate the squared Spearman coefficients)
 4) Plot the results
 
 ## 1) Extracting the regions to align from the reference genome
@@ -93,7 +93,11 @@ nucmer --mum -c 20 -b 500 -l 10 --maxgap 500
 
 **-maxgap**: Sets the maximum gap between two adjacent matches in a cluster to 500bp. 
 
-## 3) Plot the alignment plots
+
+## 3) Get the phenotype and genotype at each SNP in the GWAS (used to estimate the squared Spearman coefficients)
+
+
+## 4) Plot the alignment plots
 
 Plots summarising the results along the regions of interest were plotted in R using the script plotting_nucmer_windows.R.
 
