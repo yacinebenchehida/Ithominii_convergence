@@ -1,4 +1,4 @@
-# RELATE
+# RELATE (WORK IN PROGRESS)
 
 This folder contains all the scripts used to perform the RELATE analyses.
 
@@ -58,16 +58,16 @@ SPECIES=$(echo $TAXA|perl -pe 's/,/ /g')
 
 for i in $SPECIES; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
 echo POP FILE READY
-``` 
+```
 
-###############################################
-# 4 - Get VCF for specific region/individuals #
-###############################################
+- Step2: Get VCF for specific region/individuals
+``` bash
 bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
 VCF="$OUTPUT_PATH/$PREFIX/$PREFIX.vcf.gz"
 echo "SUBSETTED VCF FILE READY"
+```
 
 #################
 # 5 - phase vcf #
