@@ -39,7 +39,7 @@ sample4	group3
 
 ## 3) Rational behind the RELATE analyses
 
-In this study, RELATE analyses were performed with four taxa, including an outgroup to define the ancestral allele for each bi-allelic SNP. These analyses, aimed at detecting evidence of introgression at the top GWAS SNPs, were conducted across various taxa combinations following the rationale of the ABBA-BABA test (Durand et al. 2011). The taxa comprised two morphologically distinct sister species (sp1 and sp2), a more distant species (sp3) sharing the wing phenotype of sp1, and an outgroup. Each analysis produced a marginal tree for every SNP that exceeded the significance threshold in the corresponding GWAS.
+In this study, the RELATE analyses were performed with four taxa, including an outgroup to define the ancestral allele for each bi-allelic SNP. These analyses, aimed at detecting evidence of introgression at the top GWAS SNPs, were conducted across various taxa combinations following the rationale of the ABBA-BABA test (Durand et al. 2011). The taxa comprised two morphologically distinct sister species (sp1 and sp2), a more distant species (sp3) sharing the wing phenotype of sp1, and an outgroup. Each analysis produced a marginal tree for every SNP that exceeded the significance threshold in the corresponding GWAS.
 
 
 
