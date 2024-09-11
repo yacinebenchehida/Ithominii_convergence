@@ -274,15 +274,12 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	rownames(Input) <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
 	print(Input)
 
-	# Put it all together
+	# 6) Put it all together
 	## Set row annotation (phenotypes/species)
-	ha_row = rowAnnotation(Group=do.call(c,list5),  border = TRUE,  col = list(Group = do.call(c,list6)))
+	ha_row = rowAnnotation(Group=do.call(c,list5),  border = TRUE, show_legend = FALSE,  col = list(Group = do.call(c,list6)))
 
 	## Set column annotation (SNPs p-values)
-	ha_column = HeatmapAnnotation(
-	pvalue = as.numeric(do.call(c,list4)), 
-	col = list(pvalue = color_function),
-	border = TRUE,show_annotation_name = FALSE)
+	ha_column = HeatmapAnnotation(pvalue = as.numeric(do.call(c,list4)), col = list(pvalue = color_function),border = TRUE,show_annotation_name = FALSE)
 	
 	## Create heatmap
 	brut <- Heatmap(
@@ -297,13 +294,18 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	row_split = reordered_group,
 	col = genotype_colors,
 	border = TRUE, left_annotation = ha_row,
-	top_annotation = ha_column, column_names_rot = 45, 
+	top_annotation = ha_column, column_names_rot = 45, row_title_rot = 0, 
 	column_names_side = "top") 
 	
-	htmp <- draw(brut, heatmap_legend_side="right", annotation_legend_side="right",column_gap = unit(2, "mm"),  # Space between column blocks
-     row_gap = unit(2, "mm"))
+	lgd_boxplot = Legend(labels = colors_corresp$V1, title = "Phenotype",legend_gp = gpar(fill = colors_corresp$V2))
+	
+	# 7) Final heatmap
+	pdf(paste("Heatmap_",opt$species, "_",opt$gene,"_zoomed_out_phylo.pdf",sep=""),11,11)
+	draw(brut, heatmap_legend_side="right", annotation_legend_side="right",column_gap = unit(2, "mm"),  # Space between column blocks
+     row_gap = unit(2, "mm"), heatmap_legend_list = list(lgd_boxplot))
+	dev.off()
      
-    return(htmp)
+    return(brut)
 }
 
 ########
@@ -326,10 +328,5 @@ Combined <- merge_focal_multisp(focal, multi, opt$samples_order)
 # Make complexheatmap matrix input
 matrix_input <- create_matrix_input(Combined, opt$samples_order)
 
-# Generate annotations and heatmap
+# Generate annotations, heatmap and plot
 my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$samples_order,matrix_input)
-
-# Plot heatmap
-pdf(paste("Heatmap_",opt$species, "_",opt$gene,"_zoomed_out_phylo.pdf",11,11)
-plot(my_heatmap)
-dev.off()
