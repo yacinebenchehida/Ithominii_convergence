@@ -1,0 +1,4 @@
+orange	orange
+yellow	gold
+yellow_spots	forestgreen
+intermediate	grey
