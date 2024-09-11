@@ -330,3 +330,6 @@ matrix_input <- create_matrix_input(Combined, opt$samples_order)
 
 # Generate annotations, heatmap and plot
 my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$samples_order,matrix_input)
+
+# Usage example:
+# Rscript ./heatmap.R -s Melinaea_mothone -g Cortex -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS/Melinaea_mothone.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_mothone/GWAS.Melmotiso.base.max0.7N.minGQ10.minQ10.GWASInd.mac2.varbi.CHR4.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_mothone/*vcf.gz -r SUPER_4 -x 1385004 -y 1398720 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Multisp.txt -t 7.5 -o ../Data/Cortex/Melinaea_mothone/order_file.txt -c ../Data/Cortex/Melinaea_mothone/Color.txt
