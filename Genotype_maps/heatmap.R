@@ -237,7 +237,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	for (i in 1:length(sub)) {
 	list5[[counter]] = sub[i]
 	info_group <-  merged_gwas_multisp[i,6] 
-	tmp = corresp[corresp$group_order==info_group,2]
+	tmp = colors_corresp[colors_corresp$V1==info_group,2]
 	names(tmp) = c(sub[i])
 	list6[[counter]] = tmp
 	counter = counter + 1
@@ -296,16 +296,27 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 ########
 # Main #
 ########
+# Create row genotype - phenotype file
 phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
+
+# prepare data for focal species 
 my_focal_species_input <- paste(opt$species,"_focal_genotype_phenotype_input.txt",sep="")
 focal <- prepare_focal_data(my_focal_species_input,opt$threshold)
+
+# Prepare data for multispecies
 my_multi_species_input <- paste(opt$species,"_multisp_genotype_phenotype_input.txt",sep="")
 multi <- prepare_multisp_data(my_multi_species_input,opt$threshold,opt$species)
+
+# Combine focal and multispecies
 Combined <- merge_focal_multisp(focal, multi, opt$samples_order)
+
+# Make complexheatmap matrix input
 matrix_input <- create_matrix_input(Combined, opt$samples_order)
+
+# Generate annotations and heatmap
 my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$samples_order,matrix_input)
 
-
-pdf("Heatmap_Melinaea_mothone_Cortex_zoomed_out_phylo.pdf",11,11)
-my_heatmap
+# Plot heatmap
+pdf(paste("Heatmap_",opt$species, "_",opt$gene,"_zoomed_out_phylo.pdf",11,11)
+plot(my_heatmap)
 dev.off()
