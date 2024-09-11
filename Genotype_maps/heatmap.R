@@ -144,6 +144,8 @@ merge_focal_multisp <- function(data, data_multisp, ordre) {
 
     # Check if any Subspecies in merged_gwas_multisp is missing from ordre
     ordre_species <- read.table(ordre)
+    ordre_species <- as.vector(ordre_species$V1)
+	
     missing_samples <- setdiff(as.character(unlist(unique(merged_gwas_multisp$Subspecies))), as.character(unlist(ordre_species)))
 
     if (length(missing_samples) > 0) {
@@ -153,16 +155,16 @@ merge_focal_multisp <- function(data, data_multisp, ordre) {
 
     # Arrange the data as per the order in SNP and Subspecies
     merged_gwas_multisp <- merged_gwas_multisp %>%
-        arrange(match(SNP, unique(data$SNP)), match(Subspecies, ordre))
+        arrange(match(SNP, unique(data$SNP)), match(Subspecies, ordre_species))
 
     return(merged_gwas_multisp)
 }
 
 
 # Function to create the matrix input of complexheatmap
-create_matrix_input <- function(merged_gwas_multisp, ordre){
-	
-	ordre_species <- read.table(ordre)
+create_matrix_input <- function(merged_gwas_multisp, ordre){		
+	ordre_species <- read.table(ordre, stringsAsFactors = FALSE)
+	ordre_species <- as.vector(ordre_species$V1)
 	list_snps = list()
 	counter1 = 1
 	counter2 = 1
@@ -176,6 +178,7 @@ create_matrix_input <- function(merged_gwas_multisp, ordre){
 	 list_snps[[counter2]] <- do.call(c,list_group)
 	 counter2 = counter2 + 1
 	}
+	
 	Input_matrix = as.matrix(do.call(cbind, list_snps))
 
 	return(Input_matrix)
@@ -183,16 +186,18 @@ create_matrix_input <- function(merged_gwas_multisp, ordre){
 
 # Function to create the heatmap annotation
 create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
+	ordre_species <- read.table(ordre)
+	ordre_species <- as.vector(ordre_species$V1)
 	# 1) Subspecies annotation
 	a = table(merged_gwas_multisp$Subspecies) / length(unique(merged_gwas_multisp$SNP))
 	a  <- a[match(unique(unlist(merged_gwas_multisp$Subspecies)), names(a))]
 	a = a[a != 0]
 	list = list()
 	list2 = list()
-	
 	counter = 1
 	color_sp = as.data.frame(cbind(as.character(unique(merged_gwas_multisp$Subspecies)),rainbow(length(unique(merged_gwas_multisp$Subspecies))))) # These colors are not displayed in the final heatmap
-    couleur = color_sp[color_sp$V1 %in% unique(merged_gwas_multisp$Subspecies),2]
+	colnames(color_sp) = c("Species","Color")
+	couleur = color_sp[color_sp$V1 %in% unique(merged_gwas_multisp$Subspecies),2]
 	for (i in 1:length(a)) {
 		list[[counter]] = rep(names(a[i]), a[i])
 		tmp = color_sp[color_sp$Species==names(a[i]),2]
@@ -201,8 +206,10 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 		counter = counter + 1
 	}
 	current_group_order <- do.call(c,list)	
-	factor_levels <- factor(current_group_order, levels = ordre)
+	factor_levels <- factor(current_group_order, levels = ordre_species)
 	reordered_group <- factor_levels[order(factor_levels)]
+	
+	print("Subspecies annotation ready")
 	
 	# 2) pvalues annotation
 	lespvalues <- unique(merged_gwas_multisp$pvalue)
@@ -212,7 +219,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	counter = 1 
 
 	for (i in unique(merged_gwas_multisp$SNP)){
-		lespvalues <- unique(merged_gwas_multisp[merged_gwas_multisp$SNP==i,2])
+		lespvalues <- unique(merged_gwas_multisp[merged_gwas_multisp$SNP==i,6])
 		list3[[counter]] = lespvalues
 		counter = counter + 1
 	}
@@ -225,25 +232,28 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 		counter = counter + 1
 	}
 	
+	print("pvalues annotation ready")
+
 	# 3) phenotype annotation
-	a = table(merged_gwas_multisp$Group) / length(unique(merged_gwas_multisp$SNP))
+	a = table(merged_gwas_multisp$Phenotype) / length(unique(merged_gwas_multisp$SNP))
 	a = a[a != 0]
 	list5 = list()
 	list6 = list()
 	counter = 1
 	colors_corresp <- read.table(colors_file)
-	sub <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],4]
+	sub <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
 	
 	for (i in 1:length(sub)) {
-	list5[[counter]] = sub[i]
-	info_group <-  merged_gwas_multisp[i,6] 
-	tmp = colors_corresp[colors_corresp$V1==info_group,2]
-	names(tmp) = c(sub[i])
-	list6[[counter]] = tmp
-	counter = counter + 1
+		list5[[counter]] = sub[i]
+		info_group <-  merged_gwas_multisp[i,4] 
+		tmp = colors_corresp[colors_corresp$V1==info_group,2]
+		names(tmp) = c(sub[i])
+		list6[[counter]] = tmp
+		counter = counter + 1
 	}
 	
-	
+	print("Phenotype annotation ready")
+		
 	# 4) Set genotype colors
 	genotypes <- c("..","00", "01", "11", "Other")
 	pal <- c("gray75",wes_palette("Zissou1", 3, type = "continuous"),"pink")
@@ -256,11 +266,14 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	genotypes_data <- unique(merged_gwas_multisp$Genotype)
 	genotype_colors <- get_genotype_colors(genotypes_data, genotype_color_map)
 	pal = c("gray75",pal[seq(unique(merged_gwas_multisp$Genotype))-1])
-	
+	print("Genotype colors set")
+
 	# 5) Add SNP name at the bottom
-	colnames(Input) <- unique(merged_gwas_multisp$SNP)
-	rownames(Input) <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],4]
 	
+	colnames(Input) <- unique(merged_gwas_multisp$SNP)
+	rownames(Input) <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
+	print(Input)
+
 	# Put it all together
 	## Set row annotation (phenotypes/species)
 	ha_row = rowAnnotation(Group=do.call(c,list5),  border = TRUE,  col = list(Group = do.call(c,list6)))
@@ -297,7 +310,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 # Main #
 ########
 # Create row genotype - phenotype file
-phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
+#phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
 
 # prepare data for focal species 
 my_focal_species_input <- paste(opt$species,"_focal_genotype_phenotype_input.txt",sep="")
