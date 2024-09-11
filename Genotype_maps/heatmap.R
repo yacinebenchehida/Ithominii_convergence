@@ -47,9 +47,9 @@ if (is.null(opt$species) || is.null(opt$gene) || is.null(opt$gwas) ||
   quit(status=1)
 }
 
-#######################################
-# Print all the options (for testing) #
-#######################################
+#################
+# Print options #
+#################
 cat("Species name: ", opt$species, "\n")
 cat("Gene name: ", opt$gene, "\n")
 cat("GWAS file: ", opt$gwas, "\n")
