@@ -43,7 +43,7 @@ if (is.null(opt$species) || is.null(opt$gene) || is.null(opt$gwas) ||
     is.null(opt$start_pos) || is.null(opt$end_pos) || 
     is.null(opt$phen_focal) || is.null(opt$phen_multi) || 
     is.null(opt$threshold) || is.null(opt$samples_order) || is.null(opt$color_phenotypes)){
-  cat("Usage: script_with_getopt.R -s <species> -g <gene> -w <gwas> -f <vcf_focal> -m <vcf_multi> -r <region|scaffold|chromosome> -x <start_pos> -y <end_pos> -p <phen_focal> -q <phen_multi> -t <threshold> -o <samples_order_file> -c <color_phenotypes>\n")
+  cat("Usage: Rscript ./heatmap.R -s <species> -g <gene> -w <gwas> -f <vcf_focal> -m <vcf_multi> -r <region|scaffold|chromosome> -x <start_pos> -y <end_pos> -p <phen_focal> -q <phen_multi> -t <threshold> -o <samples_order_file> -c <color_phenotypes>\n")
   quit(status=1)
 }
 
