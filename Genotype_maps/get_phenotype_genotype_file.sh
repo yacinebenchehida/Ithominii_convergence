@@ -4,14 +4,13 @@
 # Load necessary modules #
 ##########################
 module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
-module load Biopython/1.81-foss-2022b # Load Biopython module for biological computation
 module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
 
 ########################
 # Get script arguments #
 ########################
 GENE=$2
-SPECIES=$1  # Get all arguments except the last one (the species list)
+SPECIES=$1
 GWAS=$3
 VCF=$4
 VCF_multisp=$5
@@ -23,12 +22,6 @@ NUMB_SAMPLES=$(cat $PHENOTYPE|wc -l)
 PHENOTYPE_MULTI=${10}
 NUMB_SAMPLES_MULTI=$(cat $PHENOTYPE_MULTI|wc -l)
 
-#echo "Gene name: $GENE"     # Print the gene name
-#echo "Species: $SPECIES"    # Print species
-#echo "GWAS file: $GWAS"
-#echo "VCF: $VCF"
-#echo "VCF multispecies: $VCF_multisp"
-#echo "Peak position: $SCAFFOLD $PEAK_START $PEAK_END"
 echo "Phenotype focal file: $PHENOTYPE contains $NUMB_SAMPLES samples"
 echo "Phenotype multi file: $PHENOTYPE_MULTI contains $NUMB_SAMPLES_MULTI samples"
 
@@ -37,6 +30,7 @@ echo "Phenotype multi file: $PHENOTYPE_MULTI contains $NUMB_SAMPLES_MULTI sample
 ###############################################
 awk -v scaffold="$SCAFFOLD" -v start="$PEAK_START" -v end="$PEAK_END" \
         '$1 == scaffold && $3 >= start && $3 <= end {print $3"\t"$4}' $GWAS > "${SPECIES}_peak_pvalues.txt"
+cat "${SPECIES}_peak_pvalues.txt"|wc -l
 echo "PVALUES IN PEAK EXTRACTED"  # Indicate that p-values extraction is completed
 
 ###########################################  
@@ -72,8 +66,6 @@ done
 
 rm "${SPECIES}_focal_genotypes.txt"
 echo "FOCAL SPECIES R INPUT READY"
-
-
 
 ###########################################  
 # Get a VCF for multi species in GWAS peak #
