@@ -3,14 +3,14 @@
 ##########################
 # Load necessary modules #
 ##########################
-module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
-module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
+module load R     # Load R module for statistical computing and graphics
+module load BCFtools # Load BCFtools module for working with VCF files
 
 ########################
 # Get script arguments #
 ########################
-GENE=$2
 SPECIES=$1
+GENE=$2
 GWAS=$3
 VCF=$4
 VCF_multisp=$5
