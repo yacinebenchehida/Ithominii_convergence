@@ -24,7 +24,7 @@ spec <- matrix(c(
   'phen_focal',      'p', 1, 'character',  'Phenotype file for focal species',
   'phen_multi',      'q', 1, 'character',  'Phenotype file for multi species',
   'threshold',       't', 1, 'numeric',    'Threshold value',
-  'samples_order',   'o', 1, 'character',  'order file with the samples in the heatmap',
+  'species_order',   'o', 1, 'character',  'order file with the samples in the heatmap',
   'color_phenotypes','c', 1, 'character',  'color file: two columns file giving the phenotype and associated color' 
 ), byrow = TRUE, ncol = 5)
 
@@ -42,7 +42,7 @@ if (is.null(opt$species) || is.null(opt$gene) || is.null(opt$gwas) ||
     is.null(opt$vcf_focal) || is.null(opt$vcf_multi) || is.null(opt$scaffold) || 
     is.null(opt$start_pos) || is.null(opt$end_pos) || 
     is.null(opt$phen_focal) || is.null(opt$phen_multi) || 
-    is.null(opt$threshold) || is.null(opt$samples_order) || is.null(opt$color_phenotypes)){
+    is.null(opt$threshold) || is.null(opt$species_order) || is.null(opt$color_phenotypes)){
   cat("Usage: Rscript ./heatmap.R -s <species> -g <gene> -w <gwas> -f <vcf_focal> -m <vcf_multi> -r <region|scaffold|chromosome> -x <start_pos> -y <end_pos> -p <phen_focal> -q <phen_multi> -t <threshold> -o <samples_order_file> -c <color_phenotypes>\n")
   quit(status=1)
 }
@@ -61,7 +61,7 @@ cat("End position: ", opt$end_pos, "\n")
 cat("Phenotype file for focal species: ", opt$phen_focal, "\n")
 cat("Phenotype file for multi species: ", opt$phen_multi, "\n")
 cat("Threshold: ", opt$threshold, "\n")
-cat("Samples order file: ", opt$samples_order, "\n")
+cat("Samples order file: ", opt$species_order, "\n")
 cat("Color file: ", opt$color_phenotypes, "\n")
 
 ####################################
@@ -323,13 +323,13 @@ my_multi_species_input <- paste(opt$species,"_multisp_genotype_phenotype_input.t
 multi <- prepare_multisp_data(my_multi_species_input,opt$threshold,opt$species)
 
 # Combine focal and multispecies
-Combined <- merge_focal_multisp(focal, multi, opt$samples_order)
+Combined <- merge_focal_multisp(focal, multi, opt$species_order)
 
 # Make complexheatmap matrix input
-matrix_input <- create_matrix_input(Combined, opt$samples_order)
+matrix_input <- create_matrix_input(Combined, opt$species_order)
 
 # Generate annotations, heatmap and plot
-my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$samples_order,matrix_input)
+my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$species_order,matrix_input)
 
 # Usage example:
 # Rscript ./heatmap.R -s Melinaea_mothone -g Cortex -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS/Melinaea_mothone.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_mothone/GWAS.Melmotiso.base.max0.7N.minGQ10.minQ10.GWASInd.mac2.varbi.CHR4.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_mothone/*vcf.gz -r SUPER_4 -x 1385004 -y 1398720 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Multisp.txt -t 7.5 -o ../Data/Cortex/Melinaea_mothone/order_file.txt -c ../Data/Cortex/Melinaea_mothone/Color.txt
