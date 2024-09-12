@@ -1,5 +1,5 @@
 #! /usr/bin/perl -w
-#Author: Prof. Kachon Dasmahapatra
+#Author: Prof. Kanchon Dasmahapatra
 use strict;
 use warnings;
 
