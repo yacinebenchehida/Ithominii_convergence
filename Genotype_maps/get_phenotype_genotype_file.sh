@@ -3,13 +3,13 @@
 ##########################
 # Load necessary modules #
 ##########################
-module load R     # Load R module for statistical computing and graphics
-module load BCFtools # Load BCFtools module for working with VCF files
+module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
+module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
 
 ########################
 # Get script arguments #
 ########################
-SPECIES=$1
+SPECIES=$1 
 GENE=$2
 GWAS=$3
 VCF=$4
@@ -22,6 +22,12 @@ NUMB_SAMPLES=$(cat $PHENOTYPE|wc -l)
 PHENOTYPE_MULTI=${10}
 NUMB_SAMPLES_MULTI=$(cat $PHENOTYPE_MULTI|wc -l)
 
+#echo "Gene name: $GENE"     # Print the gene name
+#echo "Species: $SPECIES"    # Print species
+#echo "GWAS file: $GWAS"
+#echo "VCF: $VCF"
+#echo "VCF multispecies: $VCF_multisp"
+#echo "Peak position: $SCAFFOLD $PEAK_START $PEAK_END"
 echo "Phenotype focal file: $PHENOTYPE contains $NUMB_SAMPLES samples"
 echo "Phenotype multi file: $PHENOTYPE_MULTI contains $NUMB_SAMPLES_MULTI samples"
 
@@ -43,7 +49,9 @@ tabix "${SPECIES}_focal_peak.vcf.gz"
 ############################################################
 # Get genotype for the peak regions from the focal species #
 #############################################################
-bcftools query -f '%POS  [ %GT]\n'] "${SPECIES}_focal_peak.vcf.gz" > "${SPECIES}_focal_genotypes.txt"
+bcftools query -f '%POS  [ %GT]\n'] "${SPECIES}_focal_peak.vcf.gz" > "${SPECIES}_focal_genotypes_tmp.txt"
+grep -f <(awk '{print $1}' "${SPECIES}_peak_pvalues.txt") "${SPECIES}_focal_genotypes_tmp.txt" > "${SPECIES}_focal_genotypes.txt"
+
 rm "${SPECIES}_focal_peak.vcf.gz"
 rm "${SPECIES}_focal_peak.vcf.gz.tbi"
 
@@ -64,8 +72,10 @@ cat "${SPECIES}_focal_genotypes.txt" | while read line; do
     ((counter++))
 done
 
-rm "${SPECIES}_focal_genotypes.txt"
+#rm "${SPECIES}_focal_genotypes.txt"
 echo "FOCAL SPECIES R INPUT READY"
+
+
 
 ###########################################  
 # Get a VCF for multi species in GWAS peak #
