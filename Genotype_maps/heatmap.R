@@ -312,7 +312,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 # Main #
 ########
 # Create row genotype - phenotype file
-#phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
+phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
 
 # prepare data for focal species 
 my_focal_species_input <- paste(opt$species,"_focal_genotype_phenotype_input.txt",sep="")
