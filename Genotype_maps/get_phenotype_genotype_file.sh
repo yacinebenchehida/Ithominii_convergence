@@ -3,8 +3,8 @@
 ##########################
 # Load necessary modules #
 ##########################
-module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
-module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
+module load R
+module load BCFtools
 
 ########################
 # Get script arguments #
@@ -17,7 +17,7 @@ VCF_multisp=$5
 SCAFFOLD=$6
 PEAK_START=$7
 PEAK_END=$8
-PHENOTYPE=${9}
+PHENOTYPE=$9
 NUMB_SAMPLES=$(cat $PHENOTYPE|wc -l)
 PHENOTYPE_MULTI=${10}
 NUMB_SAMPLES_MULTI=$(cat $PHENOTYPE_MULTI|wc -l)
@@ -72,7 +72,7 @@ cat "${SPECIES}_focal_genotypes.txt" | while read line; do
     ((counter++))
 done
 
-rm "${SPECIES}_focal_genotypes.txt" "${SPECIES}_focal_genotypes_tmp.txt"
+#rm "${SPECIES}_focal_genotypes.txt"
 echo "FOCAL SPECIES R INPUT READY"
 
 
