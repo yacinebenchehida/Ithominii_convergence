@@ -72,7 +72,7 @@ cat "${SPECIES}_focal_genotypes.txt" | while read line; do
     ((counter++))
 done
 
-#rm "${SPECIES}_focal_genotypes.txt"
+rm "${SPECIES}_focal_genotypes.txt" "${SPECIES}_focal_genotypes_tmp.txt"
 echo "FOCAL SPECIES R INPUT READY"
 
 
