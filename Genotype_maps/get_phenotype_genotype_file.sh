@@ -151,5 +151,5 @@ cat "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" | while read line; do
     ((counter++))
 done
 
-rm "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" "${SPECIES}_peak_pvalues.txt" reordered_"$tmp_name"
+rm "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" "${SPECIES}_peak_pvalues.txt" reordered_"$tmp_name" "${SPECIES}_focal_genotypes_tmp.txt"
 echo "MULTI SPECIES R INPUT READY"
