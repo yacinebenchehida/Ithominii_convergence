@@ -36,7 +36,8 @@ echo "Phenotype multi file: $PHENOTYPE_MULTI contains $NUMB_SAMPLES_MULTI sample
 ###############################################
 awk -v scaffold="$SCAFFOLD" -v start="$PEAK_START" -v end="$PEAK_END" \
         '$1 == scaffold && $3 >= start && $3 <= end {print $3"\t"$4}' $GWAS > "${SPECIES}_peak_pvalues.txt"
-cat "${SPECIES}_peak_pvalues.txt"|wc -l
+SNP=$(cat "${SPECIES}_peak_pvalues.txt" | wc -l)
+echo "There are $SNP SNPs in the GWAS peak"
 echo "PVALUES IN PEAK EXTRACTED"  # Indicate that p-values extraction is completed
 
 ###########################################  
@@ -69,7 +70,7 @@ reorder_sample_vcf_order() {
     if grep -Pq "$line(\s)+" "$PHENOTYPE"; then
       grep -P "$line(\s)+" "$PHENOTYPE" >> reordered_"$name"
     else
-      echo -e "PROBLEM: The sample $line is MISSING from the $PHENOTOYPE file"
+      echo -e "PROBLEM: The sample $line is MISSING from the $PHENOTYPE file"
       echo -e "Add it to the phenotype file or consider removing it from the VCF"
       echo -e "Quitting"
       echo -e "The problem is the missing sample in the $PHENOTYPE file. Any messge after this line should be ignored"
