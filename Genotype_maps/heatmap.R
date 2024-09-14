@@ -76,7 +76,6 @@ phenotype_genotype <- function(species, gene, gwas, vcf_focal, vcf_multi, scaffo
 # Function to prepare focal data
 prepare_focal_data <- function(input,threshold){
 	data <- read.table(input)
-	print(head(data))
 	data = data[data$V3 != -9, ]
 	colnames(data) = c("SNP", "Sample_name", "Subspecies", "Phenotype","Genotype","pvalue")
 	data$Genotype = gsub(pattern = "/", x = data$Genotype, replacement = "", perl = TRUE)
@@ -157,7 +156,8 @@ merge_focal_multisp <- function(data, data_multisp, ordre) {
     # Arrange the data as per the order in SNP and Subspecies
     merged_gwas_multisp <- merged_gwas_multisp %>%
         arrange(match(SNP, unique(data$SNP)), match(Subspecies, ordre_species))
-
+	
+    print("Focal and multispecies data merged")
     return(merged_gwas_multisp)
 }
 
@@ -181,6 +181,7 @@ create_matrix_input <- function(merged_gwas_multisp, ordre){
 	}
 	
 	Input_matrix = as.matrix(do.call(cbind, list_snps))
+	print("Raw genotype matrix ready")
 
 	return(Input_matrix)
 }
@@ -272,14 +273,17 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	# 5) Add SNP name at the bottom
 	colnames(Input) <- unique(merged_gwas_multisp$SNP)
 	rownames(Input) <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
+	print("SNPs annotation ready")
 
 	# 6) Put it all together
 	## Set row annotation (phenotypes/species)
 	ha_row = rowAnnotation(Group=do.call(c,list5),  border = TRUE, show_legend = FALSE,  col = list(Group = do.call(c,list6)))
+	print("row annotation ready")
 
 	## Set column annotation (SNPs p-values)
 	ha_column = HeatmapAnnotation(pvalue = as.numeric(do.call(c,list4)), col = list(pvalue = color_function),border = TRUE,show_annotation_name = FALSE)
-	
+	print("column annotation ready")
+
 	## Create heatmap
 	brut <- Heatmap(
 	Input,
@@ -294,14 +298,18 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	col = genotype_colors,
 	border = TRUE, left_annotation = ha_row,
 	top_annotation = ha_column, column_names_rot = 45, row_title_rot = 0, 
-	column_names_side = "top") 
-	
+	column_names_side = "top",
+	column_gap = unit(2, "mm"), row_gap = unit(2, "mm")) 
+	print("heatmap created")
+
+	## Create legend for phenotype
 	lgd_boxplot = Legend(labels = colors_corresp$V1, title = "Phenotype",legend_gp = gpar(fill = colors_corresp$V2))
-	
+	print("legend ready")	
+
 	# 7) Final heatmap
+	print("plotting")
 	pdf(paste("Heatmap_",opt$species, "_",opt$gene,"_zoomed_out_phylo.pdf",sep=""),11,11)
-	draw(brut, heatmap_legend_side="right", annotation_legend_side="right",column_gap = unit(2, "mm"),  # Space between column blocks
-     row_gap = unit(2, "mm"), heatmap_legend_list = list(lgd_boxplot))
+	draw(brut, heatmap_legend_side="right", annotation_legend_side="right",heatmap_legend_list = list(lgd_boxplot))
 	dev.off()
      
     return(brut)
@@ -333,3 +341,4 @@ my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$species_order,mat
 
 # Usage example:
 # Rscript ./heatmap.R -s Melinaea_mothone -g Cortex -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS/Melinaea_mothone.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_mothone/GWAS.Melmotiso.base.max0.7N.minGQ10.minQ10.GWASInd.mac2.varbi.CHR4.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_mothone/*vcf.gz -r SUPER_4 -x 1385004 -y 1398720 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Multisp.txt -t 7.5 -o ../Data/Cortex/Melinaea_mothone/order_file.txt -c ../Data/Cortex/Melinaea_mothone/Color.txt
+# Rscript ./heatmap.R -s Melinaea_marsaeus -g Optix -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Optix/GWAS/Melinaea_marsaeus.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_marsaeus/Melinaea_marsaeus.GQ20.DP5.snps.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -r SUPER_2 -x 25965242 -y 26021063 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Optix/Melinaea_marsaeus/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Optix/Melinaea_marsaeus/Multisp.txt -t 10 -o ../Data/Optix/Melinaea_marsaeus/order_file.txt -c ../Data/Optix/Melinaea_marsaeus/Color.txt
