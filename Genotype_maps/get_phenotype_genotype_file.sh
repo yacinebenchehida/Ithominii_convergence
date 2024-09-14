@@ -3,8 +3,8 @@
 ##########################
 # Load necessary modules #
 ##########################
-module load R
-module load BCFtools
+module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
+module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
 
 ########################
 # Get script arguments #
@@ -150,5 +150,5 @@ cat "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" | while read line; do
     ((counter++))
 done
 
-rm "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" "${SPECIES}_peak_pvalues.txt"
+rm "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" "${SPECIES}_peak_pvalues.txt" reordered_"$tmp_name"
 echo "MULTI SPECIES R INPUT READY"
