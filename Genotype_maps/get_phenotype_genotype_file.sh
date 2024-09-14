@@ -55,6 +55,36 @@ grep -f <(awk '{print $1}' "${SPECIES}_peak_pvalues.txt") "${SPECIES}_focal_geno
 rm "${SPECIES}_focal_peak.vcf.gz"
 rm "${SPECIES}_focal_peak.vcf.gz.tbi"
 
+#####################################################################################################################################
+# Function to check if all sample in the VCF are present in the phenotype file + reorder samples in phenotype file in the VCF order #
+#####################################################################################################################################
+reorder_sample_vcf_order() {
+  local VCF=$1
+  local PHENOTYPE=$2
+  name=$(basename "$PHENOTYPE")
+  > reordered_"$name"
+  
+  # Read sample names from the VCF and check against the phenotype file
+ while read -r line; do
+    if grep -Pq "$line(\s)+" "$PHENOTYPE"; then
+      grep -P "$line(\s)+" "$PHENOTYPE" >> reordered_"$name"
+    else
+      echo -e "PROBLEM: The sample $line is MISSING from the $PHENOTOYPE file"
+      echo -e "Add it to the phenotype file or consider removing it from the VCF"
+      echo -e "Quitting"
+      echo -e "The problem is the missing sample in the $PHENOTYPE file. Any messge after this line should be ignored"
+      exit 1
+    fi
+  done < <(bcftools query -l "$VCF")
+}
+
+########################################################################
+# Reorder samples in phenotype file in the same order as the focal VCF #
+########################################################################
+reorder_sample_vcf_order $VCF $PHENOTYPE
+tmp_name=$(basename "$PHENOTYPE")
+phenotype=reordered_"$tmp_name"
+
 ############################################
 # Make genotype-phenotype input file for R #
 ############################################
@@ -65,16 +95,16 @@ cat "${SPECIES}_focal_genotypes.txt" | while read line; do
     SNP=$(echo $line | awk '{print $1}')
     PVALUE=$(sed -n "${counter}p" "${SPECIES}_peak_pvalues.txt"|awk '{print $2}')
     paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) \
-          <(cat $PHENOTYPE) \
+          <(cat $phenotype) \
           <(echo $line | awk '{$1=""; print $0}' | perl -pe 's/^ //g' | perl -pe 's/ /\n/g') \
           <(for i in $(seq "$NUMB_SAMPLES"); do echo $PVALUE; done) \
     >> "${SPECIES}_focal_genotype_phenotype_input.txt"
     ((counter++))
 done
 
-#rm "${SPECIES}_focal_genotypes.txt"
+rm "${SPECIES}_focal_genotypes.txt"
+rm reordered_"$tmp_name"
 echo "FOCAL SPECIES R INPUT READY"
-
 
 
 ###########################################  
@@ -93,8 +123,15 @@ rm ${SPECIES}_multi_peak.vcf.*
 #########################################################################
 # Extract SNPs present in the focal species GWAS from the genotype file #
 #########################################################################
-grep -f <(awk '{print $1}' "${SPECIES}_peak_pvalues.txt") "${SPECIES}_multi_genotypes.txt" >  "${SPECIES}_GWAS_SNPS_multisp_genotype.txt"
+grep -f <(awk '{print $1}' "${SPECIES}_peak_pvalues.txt") "${SPECIES}_multi_genotypes.txt" > "${SPECIES}_GWAS_SNPS_multisp_genotype.txt"
 rm "${SPECIES}_multi_genotypes.txt"
+
+############################################################################################
+# Reorder samples in multispecies phenotype file in the same order as the multispecies VCF #
+############################################################################################
+reorder_sample_vcf_order $VCF_multisp $PHENOTYPE_MULTI
+tmp_name=$(basename "$PHENOTYPE_MULTI")
+phenotype=reordered_"$tmp_name"
 
 ############################################
 # Make genotype-phenotype input file for R #
@@ -106,7 +143,7 @@ cat "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" | while read line; do
     SNP=$(echo $line | awk '{print $1}')
     PVALUE=$(sed -n "${counter}p" "${SPECIES}_peak_pvalues.txt"|awk '{print $2}')
     paste <(for i in $(seq "$NUMB_SAMPLES_MULTI"); do echo $SNP; done) \
-          <(cat $PHENOTYPE_MULTI) \
+          <(cat $phenotype) \
           <(echo $line | awk '{$1=""; print $0}' | perl -pe 's/^ //g' | perl -pe 's/ /\n/g') \
           <(for i in $(seq "$NUMB_SAMPLES_MULTI"); do echo $PVALUE; done) \
     >> "${SPECIES}_multisp_genotype_phenotype_input.txt"
