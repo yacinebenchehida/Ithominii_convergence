@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --time=03:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=10G 
-#SBATCH --account=BIOL-SPECGEN-2018 
-#SBATCH --job-name=Relate
 
 usage()
 {
@@ -20,7 +13,7 @@ OPTIONS:
   --snps	List of SNPs for which a newick tree will be plotted (comma separated)
   -f            Population file
   -t		List of taxa to analyses separated by a comma
-  -r		Outgroup name (taxa used to define the ancestral state)
+  -r		taxa used to define the ancestral state - if omitted it will use all the samples present in the VCF (provided in -v)
   -o		Output folder  path
   -n            Prefix used for output files
   -h            usage information and help (this message)
@@ -97,11 +90,24 @@ do
 done
 
 # Check if all mandatory arguments are provided
-if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $OUTGROUP ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
 then
 	usage
 	exit 1
 fi
+
+###########################
+# Check if -r has a value #
+###########################
+if [ -n "${OUTGROUP}" ]; then
+    echo "-r option was provided with value: ${OUTGROUP}"
+    # Do something with the value
+else
+    echo "-r option was not provided or has no value"
+    OUTGROUP="All"
+    # Do something else when -r is missing or empty
+fi
+
 
 #########################
 # 2 - Display arguments #
@@ -143,11 +149,24 @@ echo POP FILE READY
 ###############################################
 # 4 - Get VCF for specific region/individuals #
 ###############################################
+# Ingroup
 bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
-VCF="$OUTPUT_PATH/$PREFIX/$PREFIX.vcf.gz"
 echo "SUBSETTED VCF FILE READY"
+
+# Outgroup if specified
+if [ "$OUTGROUP" != All ]; then
+	OUTG=$(echo $OUTGROUP|perl -pe 's/,/ /g')
+	for i in $OUTG; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phenotype_file.txt; done
+	bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf
+	bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf
+	tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf.gz
+	$SHAPEIT --input $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf.gz  --region $CHR --output $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phased.vcf
+	bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phased.vcf
+	tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phased.vcf.gz
+	echo "OUTGROUP READY"
+fi
 
 #################
 # 5 - phase vcf #
@@ -158,25 +177,32 @@ bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
 echo PHASING PERFORMED
 
-VCF="$OUTPUT_PATH/$PREFIX/$PREFIX_phased.vcf"
-rm $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+#rm $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
 
 #############################################################
 # 6 - Convert VCF to relate input files (*haps and *sample) #
 #############################################################
+# Ingroup
 # Create VCF with human chromosome names
 echo -e $CHR"\t"1 > $OUTPUT_PATH/$PREFIX/chrom_names.txt
 bcftools annotate --rename-chrs $OUTPUT_PATH/$PREFIX/chrom_names.txt $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz
-rm $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
+
+# Outgroup if specified
+if [ "$OUTGROUP" != All ]; then
+	bcftools annotate --rename-chrs $OUTPUT_PATH/$PREFIX/chrom_names.txt  $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phased.vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_renamed_phased.vcf.gz
+fi
+#rm $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz 
 echo VCF RENAMED
 
-# Create a plink linkage map
-#vcftools --gzvcf $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz --out $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map --plink
-#echo PLINK LINKAGE MAP GENERATED
 
 # Create a Relate linkage map from the plink linkage map
 #Rscript ./makeRelateMap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz $OUTPUT_PATH/$PREFIX/"$PREFIX"_linkage_map.map
 Rscript ./createuniformrecmap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz LM.bed
+
+# Outgroup if specified
+if [ "$OUTGROUP" != All ]; then
+	Rscript ./createuniformrecmap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_renamed_phased.vcf.gz LM.bed
+fi
 echo RELATE LINKAGE MAP GENERATED
 
 # Create inputs required by Relate
@@ -187,16 +213,24 @@ $RELATE/bin/RelateFileFormats \
                  -i $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed
 echo HAPS AND SAMPLE FILE GENERATED
 
-
-##################################################################
-# 7 - Use outgroup to set ancestral and derived alleles and flip #
-##################################################################
-# Find name outgroups and write --indv command
-indv_command=$(for i in $(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|grep $OUTGROUP|awk '{print $1}'); do echo -e "--indv $i"; done |perl -pe 's/\n/ /g')
-echo $indv_command
+############################################################################################
+# 7 - Use all samples (defaults) or outgroup to set ancestral and derived alleles and flip #
+############################################################################################
+if [ "$OUTGROUP" != All ]; then
+	# Find name outgroups and write --indv command
+	indv_command=$(for i in $(bcftools query -l $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_renamed_phased.vcf.gz); do echo -e "--indv $i"; done |perl -pe 's/\n/ /g')
+	echo $indv_command
+	ANC_STATE_VCF="${OUTPUT_PATH}/${PREFIX}/${PREFIX}_outgroup_renamed_phased.vcf.gz"
+	bcftools query -l $ANC_STATE_VCF
+else
+	bcftools view --regions $CHR:$START-$END $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX"_ALL_samples.vcf
+	bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_ALL_samples.vcf
+	tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_ALL_samples.vcf.gz
+	ANC_STATE_VCF="${OUTPUT_PATH}/${PREFIX}/${PREFIX}_ALL_samples.vcf.gz"
+fi
 
 # Get the allele frequencies of the outgroups 
-vcftools --gzvcf $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz  --freq $indv_command --out $OUTPUT_PATH/$PREFIX/outgroups
+vcftools --gzvcf $ANC_STATE_VCF --freq $indv_command --out $OUTPUT_PATH/$PREFIX/outgroups
 echo ALLELE FREQUENCIES ESTIMATED FOR OUTGROUPS
 
 # Get ancestral alleles
@@ -281,7 +315,4 @@ $RELATE/scripts/TreeView/TreeView.sh \
 		-o "$PREFIX"_"$i"
 done
 
-
-
-#Running example: ./Relate_launcher -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25956241 -e 26031063 -f ../Inputs/rich_data.txt -t mothone,lilis,satevis,marsaeus_rileyi --snps 25956270,25972495,25993654,25996297 -o . -n test
-#sbatch ./Relate_launcher -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 23556241 -e 27031063 -f ../Inputs/Input_2_use.txt -t mothone,ludovica,isocomma,satevis,marsaeus_rileyi,marsaeus_phasiana --snps 25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282 -r ludovica -o ../Results/Melinaea_marsaeus -n mothone_ludovica_isocomma_satevis_marsaeus_rileyi_marsaeus_phasiana
+rm *vcf.gz*
