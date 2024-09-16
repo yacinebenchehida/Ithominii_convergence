@@ -96,9 +96,9 @@ then
 	exit 1
 fi
 
-###########################
-# Check if -r has a value #
-###########################
+#############################
+# 1 Check if -r has a value #
+#############################
 if [ -n "${OUTGROUP}" ]; then
     echo "-r option was provided with value: ${OUTGROUP}"
     # Do something with the value
