@@ -96,9 +96,9 @@ then
 	exit 1
 fi
 
-#############################
-# 1 Check if -r has a value #
-#############################
+###########################
+# Check if -r has a value #
+###########################
 if [ -n "${OUTGROUP}" ]; then
     echo "-r option was provided with value: ${OUTGROUP}"
     # Do something with the value
@@ -135,7 +135,13 @@ RELATE="/mnt/scratch/projects/biol-specgen-2018/edd/software/relate_v1.2.1_x86_6
 ##############################
 # 3 - Get the phenotype file #
 ##############################
+# Create working directory
+if [ -d $OUTPUT_PATH/$PREFIX ]; then
+    rm -r $OUTPUT_PATH/$PREFIX
+fi
 mkdir -p $OUTPUT_PATH/$PREFIX
+
+# Create phenotype file
 if [ -f  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt ]; then
     rm  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
 fi
@@ -143,8 +149,17 @@ touch  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
 
 SPECIES=$(echo $TAXA|perl -pe 's/,/ /g')
 
-for i in $SPECIES; do cat ${POP}| grep -P "\s$i\s*\w*$" >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
+for i in $SPECIES; do cat ${POP}| grep -P "\s$i\s*(\w)*$" >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
 echo POP FILE READY
+
+# Check if phenotype file contains at least 20 individuals
+NUM_SAM=$(wc -l < "$OUTPUT_PATH/$PREFIX/${PREFIX}_phenotype_file.txt")
+if [ "$NUM_SAM" -lt 20 ]; then
+  echo "NOT ENOUGH SAMPLES IN ${OUTPUT_PATH}/${PREFIX}/${PREFIX}_phenotype_file.txt CANNOT PERFORM THE PHASING"
+  echo "I NEED AT LEAST 20 INGROUP SAMPLES."
+  echo  "QUITTING"
+  exit 1  
+fi
 
 ###############################################
 # 4 - Get VCF for specific region/individuals #
@@ -159,6 +174,14 @@ echo "SUBSETTED VCF FILE READY"
 if [ "$OUTGROUP" != All ]; then
 	OUTG=$(echo $OUTGROUP|perl -pe 's/,/ /g')
 	for i in $OUTG; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phenotype_file.txt; done
+	# Check if phenotype file contains at least 20 individuals
+	NUM_SAM=$(wc -l < "$OUTPUT_PATH/$PREFIX/${PREFIX}_outgroup_phenotype_file.txt")
+	if [ "$NUM_SAM" -lt 20 ]; then
+  		echo "NOT ENOUGH SAMPLES IN ${OUTPUT_PATH}/${PREFIX}/${PREFIX}_outgroup_phenotype_file.txt. CANNOT PERFORM THE PHASING"
+  		echo "I NEED AT LEAST 20 OUTGROUP SAMPLES."
+		echo  "QUITTING"
+  		exit 1  
+	fi
 	bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phenotype_file.txt|awk '{print $1}') $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf
 	bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf
 	tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf.gz
