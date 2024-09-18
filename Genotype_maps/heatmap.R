@@ -94,11 +94,11 @@ prepare_focal_data <- function(input,threshold){
 prepare_multisp_data <- function(input,threshold,sp){
 	data_multisp <- read.table(input)
 	colnames(data_multisp) <- c("SNP","Sample_name", "Subspecies", "Phenotype","Genotype","pvalue")
-	
+
 	# Remove VCF separators of genotypes (i.e. / and |)
 	data_multisp$Genotype = gsub(pattern = "/", x = data_multisp$Genotype, replacement = "", perl = TRUE)
 	data_multisp$Genotype = gsub(pattern = "\\|", x = data_multisp$Genotype, replacement = "", perl = TRUE)
-
+	
 	#Take care of the situation where there are multiallelic states SNPs (Any non biallelic states is called other)
 	data_multisp[!(data_multisp$Genotype %in% c("..", "00", "01", "11")),5] = "Other"
 
@@ -272,6 +272,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 
 	# 5) Add SNP name at the bottom
 	colnames(Input) <- unique(merged_gwas_multisp$SNP)
+	print(merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3])
 	rownames(Input) <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
 	print("SNPs annotation ready")
 
@@ -289,7 +290,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	Input,
 	show_row_dend = FALSE,
 	show_column_dend = FALSE,
-	name = "zygosity",
+	name = "Genotype",
 	show_row_names = FALSE,
 	show_column_names = TRUE,
 	use_raster = FALSE,
@@ -338,6 +339,7 @@ matrix_input <- create_matrix_input(Combined, opt$species_order)
 # Generate annotations, heatmap and plot
 my_heatmap <- create_heatmap(Combined,opt$color_phenotypes,opt$species_order,matrix_input)
 
+print("Ended succesfully")
 
 # Usage example:
 # Rscript ./heatmap.R -s Melinaea_mothone -g Cortex -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS/Melinaea_mothone.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_mothone/GWAS.Melmotiso.base.max0.7N.minGQ10.minQ10.GWASInd.mac2.varbi.CHR4.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_mothone/*vcf.gz -r SUPER_4 -x 1385004 -y 1398720 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Multisp.txt -t 7.5 -o ../Data/Cortex/Melinaea_mothone/order_file.txt -c ../Data/Cortex/Melinaea_mothone/Color.txt
