@@ -49,9 +49,9 @@ done
 
 echo "FOUND PEAKS"  # Indicate that peak finding is completed
 
-###################################################################################
-# Get Spearman square coefficient for each species for all SNPs in the GWAS peak #
-###################################################################################
+#######################################################################################
+# Get a VCF and the phenotype/genotypes of each species for all SNPs in the GWAS peak #
+#######################################################################################
 for i in ${species_list[@]}  # Loop through each species
 do
     echo $i  # Print the current species
@@ -82,8 +82,13 @@ do
     # Get genotypes for each samples at each SNP
     PHENOTYPE="${PHENOTYPE_PATH}/${i}.txt"
     NUMB_SAMPLES=$(cat $PHENOTYPE|wc -l)
-    bcftools query -f '%POS  [ %GT]\n'] $VCF > "Genotype_${i}.txt"
-
+    bcftools query -f '%POS  [ %GT]\n'] $VCF > "tmp_${i}.txt"
+    grep -f <(awk '{print $1}' "${i}_peak_pvalues.txt") "tmp_${i}.txt" >  "Genotype_${i}.txt"
+    rm "tmp_${i}.txt"
+    
+    # Figure out number of SNPs in the whole GWAS output
+    TOTAL=$(cat "$GWAS_RESULTS_PATH/${i}.txt" |wc -l)
+ 
     #  Create a genotype phenotype input for each SNP and each gwas peak 
     if [ -f "${i}_genotype_phenotype_input.txt" ]; then
         rm "${i}_genotype_phenotype_input.txt"
@@ -91,10 +96,11 @@ do
 
     cat "Genotype_${i}.txt"|while read line; do
 	SNP=$(echo $line|awk '{print $1}')
-	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo $SNP; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >>  "${i}_genotype_phenotype_input.txt"
+	pvalues=$(grep $SNP "${i}_peak_pvalues.txt"|awk '{print $2}')
+	paste <(for i in $(seq "$NUMB_SAMPLES"); do echo -e $SNP"\t"$pvalues"\t"$TOTAL; done) <(cat $PHENOTYPE) <(echo $line|awk '{$1=""; print $0}'|perl -pe 's/^ //g'|perl -pe 's/ /\n/g') >>  "${i}_genotype_phenotype_input.txt"
     done
 
-    rm  "Genotype_${i}.txt" $VCF* "${i}_peak_pvalues.txt"
+    #rm  "Genotype_${i}.txt" $VCF* "${i}_peak_pvalues.txt"
     echo -e "GENOTYPE PHENOTYPE FILE READY FOR  ${i}"
 done
 
@@ -152,7 +158,7 @@ done
 # plot nucmer results #
 #######################
 echo "START PLOTTING"  # Indicate that plotting is starting
-Rscript ./plotting_nucmer_windows_new.R $annotation  # Run R script for plotting
+Rscript ./plotting_nucmer_windows_V3.R  $annotation  # Run R script for plotting
 mv *pdf $Results/mummer/sliding_windows_mapping/  # Move resulting PDFs to the results directory
-rm *_genotype_phenotype_input.txt
+#rm *_genotype_phenotype_input.txt
 echo -E "ALL SLIDING WINDOWS FINISHED"  # Indicate that all sliding window analysis is completed
