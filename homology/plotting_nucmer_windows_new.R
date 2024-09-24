@@ -2,6 +2,7 @@ library(dplyr)
 library(ggplot2)
 library(viridis)
 library(ggnewscale)
+library(ggpattern)
 
 dat = commandArgs(trailingOnly=TRUE)
 annot <- read.table(dat[1],sep="\t")
@@ -22,7 +23,14 @@ if(gene=="Hyd. like"){
 Spear_square_coeff <- function(sp) {
   # Read the input file
   geno_pheno <- read.table(paste(sp, "_genotype_phenotype_input.txt", sep=""))
-  colnames(geno_pheno) <- c("SNP", "SAMPLE", "pheno", "geno")
+
+  # Prepare data
+  colnames(geno_pheno) <- c("SNP", "Pvalue","Total_SNPs","SAMPLE", "pheno", "geno")
+  geno_pheno <- geno_pheno[,c(1,4,5,6,2,3)]
+ 
+  threshold = 0.05/geno_pheno[1,6]
+  print(threshold)
+  geno_pheno <- geno_pheno[geno_pheno$Pvalue < threshold,]
   
   # Initialize an empty list to store results
   list <- list()
@@ -209,7 +217,7 @@ counter = 1
 for (i in 1:dim(aln)[1]){
   list[[counter]] <- data.frame(
     x = c(aln$subjectStart[i],aln$subjectEnd[i],  aln$queryEnd[i],aln$queryStart[i]),
-    y = c(1,1,3,3),
+    y =  c(1.01,1.01,1.4,1.4),
     group = paste("window_",i,sep=""), 
     order = c(1, 2, 4, 3),
     reference = c(target_species, target_species,query_species, query_species))
@@ -227,8 +235,8 @@ to_colorise_target <- anno[anno$V1==target_species,c(3,4,5)]
 list = list()
 counter = 1
 for (i in unique(plotting_data$group)){
-  tmp1 = plotting_data[plotting_data$group==i & plotting_data$y==1,]
-  tmp2 = plotting_data[plotting_data$group==i & plotting_data$y==3,]
+  tmp1 = plotting_data[plotting_data$group==i & plotting_data$y==1.01,]
+  tmp2 = plotting_data[plotting_data$group==i & plotting_data$y==1.4,]
   for (j in 1:dim(to_colorise_target)[1]){
     if(any(!is.na(to_colorise_target[j, 2]) & !is.na(to_colorise_target[j, 3]) & tmp1$x >=  to_colorise_target[j, 2] & tmp1$x <= to_colorise_target[j, 3])){
       if(any(!is.na(to_colorise_query[j, 2]) & !is.na(to_colorise_query[j, 3]) & tmp2$x >= to_colorise_query[j, 2] & tmp2$x <= to_colorise_query[j, 3])){
@@ -289,7 +297,7 @@ add_scale_to_plot <- function(p, data, size) {
   difference <- (max(data$x) - min(data$x)) * 0.12
   x_position <- min(data$x) + difference
   cat("Scale bar position is:", x_position, "\n")
-  y_position <- 8.1
+  y_position <- 3.05
   
   # Add scale bar
   scale_bar <- annotate(
@@ -302,7 +310,7 @@ add_scale_to_plot <- function(p, data, size) {
   # Add text annotation
   text_annotation <- annotate(
     "text", 
-    x = x_position - scale_bar_length * 0.5, y = y_position - 0.1, 
+    x = x_position - scale_bar_length * 0.5, y = y_position + 0.05, 
     label = paste0(scale_bar_length / 1000, " kb"), size = 5
   )
   
@@ -316,83 +324,101 @@ add_scale_to_plot <- function(p, data, size) {
 ########################################################
 # Define a function to create a layer for each dataset #
 ########################################################
- create_layer <- function(data_file, y_offset) {
-   sp1 <- gsub(x = data_file, pattern = "mapping_nucmer_sliding_windows_(\\w+_\\w+)_(\\w+_\\w+).txt", replacement = "\\1", perl = TRUE)
-   sp2 <- gsub(x = data_file, pattern = "mapping_nucmer_sliding_windows_(\\w+_\\w+)_(\\w+_\\w+).txt", replacement = "\\2", perl = TRUE)
-   ready_data <- prepare_data(data_file, sp1, sp2, annot)
-   plotting_data <- ready_data[[1]]
-   anno <- ready_data[[2]]
-   anno <- anno[anno$V3!="peak",]
-   to_colorise <- ready_data[[3]]
-   color_code <- ready_data[[4]]
-   query_species <- ready_data[[5]]
-   target_species <- ready_data[[6]]
-   spearman_query <- ready_data[[7]]
-   spearman_target <- ready_data[[8]]   
+create_layer <- function(data_file, y_offset) {
+  sp1 <- gsub(x = data_file, pattern = "mapping_nucmer_sliding_windows_(\\w+_\\w+)_(\\w+_\\w+).txt", replacement = "\\1", perl = TRUE)
+  sp2 <- gsub(x = data_file, pattern = "mapping_nucmer_sliding_windows_(\\w+_\\w+)_(\\w+_\\w+).txt", replacement = "\\2", perl = TRUE)
+  ready_data <- prepare_data(data_file, sp1, sp2, annot)
+  plotting_data <- ready_data[[1]]
+  anno <- ready_data[[2]]
+  anno <- anno[anno$V3!="peak",]
+  to_colorise <- ready_data[[3]]
+  color_code <- ready_data[[4]]
+  query_species <- ready_data[[5]]
+  target_species <- ready_data[[6]]
+  spearman_query <- ready_data[[7]]
+  spearman_query <- spearman_query[spearman_query$Spearman > 0.3,]
+  spearman_target <- ready_data[[8]]
+  spearman_target <- spearman_target[spearman_target$Spearman > 0.3,]
+  print(spearman_target)
+  # Adjust y-axis position for stacking
+  plotting_data$y <- plotting_data$y + y_offset
 
-   # Adjust y-axis position for stacking
-   plotting_data$y <- plotting_data$y + y_offset
-   
-   # Create a list of ggplot layers for the current dataset
-   layers <- list(
-     geom_polygon(data = plotting_data, aes(x = x, y = y, group = group), color = "grey", fill = "black", alpha = 0.4),
-     geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == target_species, 5]), ymin = 0.75 + y_offset, ymax = 0.95 + y_offset), color = "black", fill = "white"),
-     geom_rect(data = anno[anno$V1 == unique(anno$V1)[2], ], aes(xmin = V4, xmax = V5, ymin = 0.948 + y_offset, ymax = 0.752 + y_offset, fill = V3), inherit.aes = FALSE),
-     geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == query_species, 5]), ymin = 3.05 + y_offset, ymax = 3.25 + y_offset), color = "black", fill = "white"),
-     geom_rect(data = anno[anno$V1 == unique(anno$V1)[1], ], aes(xmin = V4, xmax = V5, ymin = 3.052 + y_offset, ymax = 3.248 + y_offset, fill = V3), inherit.aes = FALSE),
-     geom_polygon(data = to_colorise, aes(x = x, y = y + y_offset, group = group), color = "brown", fill = "brown")
-   )
-
-   # Create a list of ggplot layers for peak (has to be separated because the list above contain discrete fill element while the peak will contain continuous (spearman) values
-   layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP , xmax = SNP+50, ymin = 0.755 + y_offset, ymax = 0.945 + y_offset, fill = Spearman), inherit.aes = FALSE),
-    geom_rect(data = spearman_query, aes(xmin = SNP , xmax = SNP+50, ymin = 3.055 + y_offset, ymax = 3.245 + y_offset, fill = Spearman),inherit.aes = FALSE))
+  # Create a list of ggplot layers for the current dataset
+  layers <- list(
+    geom_polygon(data = plotting_data, aes(x = x, y = y, group = group), color = "grey", fill = "black", alpha = 0.4),
+    geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == target_species, 5]), ymin = 0.75 + y_offset, ymax = 1 + y_offset), color = "black", fill = "white"),
+    geom_rect_pattern(data = anno[anno$V1 == unique(anno$V1)[2], ], aes(xmin = V4, xmax = V5, ymin = 0.75 + 0.03 + y_offset, ymax = 1 -0.03 + y_offset), color = "black", fill = "white",pattern = 'stripe',pattern_spacing=0.01),
+    geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == query_species, 5]), ymin = 1.41 + y_offset, ymax = 1.66 + y_offset), color = "black", fill = "white"),
+    geom_rect_pattern(data = anno[anno$V1 == unique(anno$V1)[1], ], aes(xmin = V4, xmax = V5, ymin =1.41 + 0.03 + y_offset, ymax = 1.658 - 0.03 + y_offset), color = "black", fill = "white", pattern = 'stripe',pattern_spacing=0.01),
+    geom_polygon(data = to_colorise, aes(x = x, y = y + y_offset, group = group), color = "brown", fill = "brown")
+  )
   
-   
-   list(layers = layers, layers_peak = layers_peak, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
- }
- 
- # Apply the function to each dataset, accumulating the y-offset as well
- layers_list <- lapply(1:length(Inputs), function(i) {
-  layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 2.3)
+  # Create a list of ggplot layers for peak (has to be separated because the list above contain discrete fill element while the peak will contain continuous (spearman) values
+  layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP-200 , xmax = SNP+200, ymin = 0.752 + y_offset, ymax = 0.992 + y_offset, fill = Spearman), inherit.aes = FALSE),
+                      geom_rect(data = spearman_query, aes(xmin = SNP-200 , xmax = SNP+200, ymin = 1.412+ y_offset, ymax = 1.658 + y_offset, fill = Spearman),inherit.aes = FALSE))
+  
+  list(layers = layers, layers_peak = layers_peak, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
+}
+
+# Apply the function to each dataset, accumulating the y-offset as well
+layers_list <- lapply(1:length(Inputs), function(i) {
+  layer_info <- create_layer(Inputs[i], y_offset = (i - 1) * 0.66)
   
   # Modify layers_peak based on the iteration index
   if (i != 1) {
-    layer_info$layers_peak <- layer_info$layers_peak[length(layer_info$layers_peak)]
+    layer_info$layers <- layer_info$layers[c(1,4,5,6)]
+    layer_info$layers_peak <- layer_info$layers_peak[c(2)]
   }
-  print(layer_info$layers_peak)
-  
   return(layer_info)
- })
- 
- # Extract individual components from the list
- all_layers <- unlist(lapply(layers_list, function(x) x$layers), recursive = FALSE)
- peak_layers <- unlist(lapply(layers_list, function(x) x$layers_peak), recursive = FALSE) 
- color_code <- layers_list[[1]]$color_code  # Assuming color code is the same across all layers
- y_values <- unlist(lapply(layers_list, function(x) x$y_values))
- species_labels <- unlist(lapply(layers_list, function(x) x$species_labels))
- 
- # Combine all layers into a single plot starting from an empty ggplot object
- p <- ggplot() +
+})
+
+# Extract individual components from the list
+all_layers <- unlist(lapply(layers_list, function(x) x$layers), recursive = FALSE)
+peak_layers <- unlist(lapply(layers_list, function(x) x$layers_peak), recursive = FALSE) 
+color_code <- layers_list[[1]]$color_code  # Assuming color code is the same across all layers
+y_values <- unlist(lapply(layers_list, function(x) x$y_values))
+species_labels <- unlist(lapply(layers_list, function(x) x$species_labels))
+
+# Information for plotting ivory
+ivory <- read.table("exons")
+offset_ivory <- annot[annot$V1=="Melinaea_menophilus" & annot$V3=="Cor. CDS" ,4]
+
+# Combine all layers into a single plot starting from an empty ggplot object
+# Combine all layers into a single plot starting from an empty ggplot object
+if(gene=="Hyd. like"){
+p <- ggplot() +
   all_layers +
   scale_y_continuous(breaks = y_values[c(1,3,5,6)], labels = species_labels[c(1,3,5,6)]) +
-  scale_fill_manual(values = color_code) +
   theme_minimal() +
   labs(x = NULL, y = NULL) +
   theme(axis.text.x = element_blank()) + 
   new_scale_fill() +  
-  peak_layers + scale_fill_gradientn(colors=c("white","grey75","grey50","grey25","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0, 1)) + guides(alpha = "none")
-
+  peak_layers + scale_fill_gradientn(colors=c("blue", "gold", "red","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0.5, 1)) + guides(alpha = "none")
+}else{
+  p <- ggplot() +
+    all_layers +
+    scale_y_continuous(breaks = y_values[c(1,3,5,6)], labels = species_labels[c(1,3,5,6)]) +
+    theme_minimal() +
+    labs(x = NULL, y = NULL) +
+    theme(axis.text.x = element_blank()) + 
+    new_scale_fill() +  
+    peak_layers + scale_fill_gradientn(colors=c("blue", "gold", "red","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0.5, 1)) + guides(alpha = "none") +
+   new_scale_fill() +
+    geom_rect(data = ivory, aes(xmin = V4-offset_ivory, xmax = V5-offset_ivory), ymin = 2.185 , ymax = 2.215, color = "pink", fill = "pink") +
+    geom_segment(aes(x = min(ivory$V4)-offset_ivory,xend = max(ivory$V5) - offset_ivory  , y = 2.20,yend = 2.20), color = "pink", size = 1) +
+    theme(legend.position = "bottom") 
+   }
 
 # Get data necessary to add scale 
-for_scale <- create_layer(Inputs[1], y_offset = (1 - 1) * 2.3)
+for_scale <- create_layer(Inputs[1], y_offset = (1 - 1) * 0.66)
 
 # Print the final plot
 if(gene=="Hyd. like"){
-	 pdf("plot_syntheny_windows_nucmer_optix.pdf",12,10,colormodel = "rgb")
-	plot(add_scale_to_plot(p,for_scale$plotting_data, size = 20000))
-	dev.off()
+  pdf("plot_syntheny_windows_nucmer_optix.pdf",20,10,colormodel = "rgb")
+  plot(add_scale_to_plot(p,for_scale$plotting_data, size = 20000))
+  dev.off()
 }else{
-	 pdf("plot_syntheny_windows_nucmer_cortex.pdf",12,10,colormodel = "rgb")
-	plot(add_scale_to_plot(p, for_scale$plotting_data, size = 20000))
-	dev.off()
+  pdf("plot_syntheny_windows_nucmer_cortex.pdf",20,10,colormodel = "rgb")
+  plot(add_scale_to_plot(p, for_scale$plotting_data, size = 20000))
+  dev.off()
 }
