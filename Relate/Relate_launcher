@@ -305,6 +305,8 @@ for i in $SPC; do
 done
 
 rm $OUTPUT_PATH/$PREFIX/tmp_matching.txt
+
+# Set the final ancestral states for position/SNPs absent in the outgroup based on allele frequencies in all taxa
 Rscript ./Find_Alternative_ancestral.r $SP $OUTPUT_PATH/$PREFIX $OUTPUT_PATH/$PREFIX/"$PREFIX".haps
 
 ## 6) Swap the ancestral state in the haps file 
