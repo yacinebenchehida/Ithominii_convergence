@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ###################################
 # Set usage and script parameters #
 ###################################
@@ -144,6 +146,7 @@ module load VCFtools/0.1.16-GCC-11.2.0
 module load Biopython/1.83-foss-2023a
 SHAPEIT="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/shapeit4/bin/shapeit4.2"
 RELATE="/mnt/scratch/projects/biol-specgen-2018/edd/software/relate_v1.2.1_x86_64_static"
+TWISST="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/twisst/twisst.py"
 SCRIPTS=$(pwd)
 
 ##############################
@@ -391,11 +394,28 @@ $RELATE/scripts/TreeView/TreeView.sh \
 		-o "$PREFIX"_"$i"
 # Extract tree for the SNPs of interest
 python3 $SCRIPTS/tree_extract.py "$PREFIX"_"$CHR"_"$min_value"-"$max_value".pos  "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick $i $PREFIX
+Rscript $SCRIPTS/plot_tree.R -t "$PREFIX"_"$i".newick -o "$PREFIX"_"$i"_replotted_tree.pdf
 
 done
 
+###################
+# 11 - Run twisst #
+###################
+# 1) Get positions input for twisst
+echo -e start"\t"end > positions.txt
+python3 $SCRIPTS/position_4_twisst.py *pos >> positions.txt
+echo POSITION FILE READY
+
+# 2) Create G_OPTION
+G_OPTION=$(cat "$PREFIX"_phenotype_file.txt| awk '{print $2}'|sort|uniq|perl -pe 's/(.+)\n/-g $1 /g')
+echo $G_OPTION
+echo G_OPTION CREATED
+
+# 3) RUN TWISST
+python $TWISST -t "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick  --method complete --groupsFile <(paste <(awk '{print $1"_"$2}' "$PREFIX"_phenotype_file.txt) <(awk '{print $2}' "$PREFIX"_phenotype_file.txt)) $G_OPTION --outputTopos Phylogeny.topos | gzip > Phylogeny.weights.tsv.gz
+
 #####################################
-# 11 - Clean all intermediate files #
+# 12 - Clean all intermediate files #
 #####################################
 rm *vcf.gz* chrom_names.txt *map *log *_alternative_ancestral_state.frq *_alternative_ancestral_state.txt 
 mkdir Other_files
