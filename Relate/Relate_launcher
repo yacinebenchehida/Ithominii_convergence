@@ -414,6 +414,9 @@ echo G_OPTION CREATED
 # 3) RUN TWISST
 python $TWISST -t "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick  --method complete --groupsFile <(paste <(awk '{print $1"_"$2}' "$PREFIX"_phenotype_file.txt) <(awk '{print $2}' "$PREFIX"_phenotype_file.txt)) $G_OPTION --outputTopos Phylogeny.topos | gzip > Phylogeny.weights.tsv.gz
 
+# 4) Plot twisst results
+Rscript $SCRIPTS/twisst.R "$min_value" "$max_value" 0.02
+
 #####################################
 # 12 - Clean all intermediate files #
 #####################################
@@ -421,6 +424,5 @@ rm *vcf.gz* chrom_names.txt *map *log *_alternative_ancestral_state.frq *_altern
 mkdir Other_files
 mv $(ls|grep -v -E "pdf|newick|pos|Other_files") Other_files
 echo RELATE FINISHED RUNNING
-
 
 # Usage example:./Relate_launcher_V4 -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25956241 -e 26031063 -f ../Inputs/Input_2_use.txt -t mothone,isocomma,satevis,marsaeus_rileyi,marsaeus_phasiana,marsaeus_macaria,lilis --snps 25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282 -r outgroup --species menophilus,satevis,mothone,flavo -o . -n test
