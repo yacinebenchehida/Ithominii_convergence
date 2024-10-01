@@ -14,8 +14,8 @@ def extract_tree_from_file(tree_file, line_number):
     """Extract the tree from the Newick file at the given line number."""
     with open(tree_file, 'r') as file:
         lines = file.readlines()
-        if line_number+1 < len(lines):
-            return lines[line_number+1].strip()  # Return the Newick tree on that line
+        if line_number < len(lines):
+            return lines[line_number].strip()  # Return the Newick tree on that line
     return None
 
 def save_tree_to_file(tree, prefix, position):
