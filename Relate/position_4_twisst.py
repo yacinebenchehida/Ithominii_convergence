@@ -10,6 +10,10 @@ def generate_intervals(file_path):
         end = numbers[i + 1] - 1
         print(f"{start} {end}")
 
+    # For the last number, add 1000
+    last_number = numbers[-1]
+    print(f"{last_number} {last_number + 1000}")
+
 # Main part
 if __name__ == "__main__":
     file_path = sys.argv[1]
