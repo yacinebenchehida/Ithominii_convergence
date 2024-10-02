@@ -26,7 +26,7 @@ if (is.null(opt$tree)) {
 # Function to extract species name after the last underscore "_"
 extract_species <- function(label) {
   parts <- strsplit(label, "_")[[1]]
-  species <- tail(parts, 1)  # Get the last part after "_"
+  species <- tail(parts, 2)[1]  # Get the last part after "_"
   return(species)
 }
 
@@ -39,9 +39,9 @@ species <- sapply(tree$tip.label, extract_species)
 # Create a data frame with tip labels and corresponding species
 tree_data <- data.frame(label = tree$tip.label, species = species, stringsAsFactors = FALSE)
 tree_data$label <- gsub("Sample_", "", tree_data$label)            # Remove "Sample_" prefix
-tree_data$label <- sub("_[^_]+$", "", tree_data$label)  
+tree_data$label <- sub("_[^_]+(_[0-9]+)?$", "", tree_data$label) 
 tree$tip.label <- gsub("Sample_", "", tree$tip.label)     
-tree$tip.label <- sub("_[^_]+$", "", tree$tip.label)  
+tree$tip.label <- sub("_[^_]+(_[0-9]+)?$", "", tree$tip.label)  
 
 # Plot the tree using ggtree and map the species information directly
 p <- ggtree(tree) %<+% tree_data + 
