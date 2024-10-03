@@ -7,7 +7,7 @@ This folder contains all the scripts used to perform the RELATE analyses.
 The whole pipeline can be run using the command below: 
 
 ``` bash
-sbatch ./Relate_launcher \
+./Relate_launcher \
 -v VCF_FILE \
 -c CHROMOSOME/SCAFFOLD \
 -s START_POSITION \ 
@@ -15,12 +15,27 @@ sbatch ./Relate_launcher \
 -f POPULATION_FILE \
 -t TAXA1,TAXA2,TAXA3,TAXA4 \ # List of taxa to be included in the analysis (separated by a comma)
 --snps SNP1,SNP2,SNP3,SNP4 \ # List of SNP positions for which a pdf tree will be generated (separated by a comma)
--r ANCESTRAL_STATE \ # Taxa used to set the ancestral state (This taxa should also be included in the -t flag)
+-r ANCESTRAL_STATE_TAXA1,ANCESTRAL_STATE_TAXA2 \ # Taxa used to set the ancestral state (separated by a comma)
+--species NAME1,NAME2,NAME3,NAME4 # List of species acronyms used to set the ancestral state for SNPs not available in the taxa specified using -r
 -o OUTPUT_PATH \
 -n OUTPUT_NAME
+
+# An example:
+/Relate_launcher
+-v My_VCF.gz
+-c Chr2
+-s 24000000
+-e 26096070
+-f hindwing_black.txt
+-t satevis,marsaeus_phasiana,marsaeus_rileyi,mothone
+--snps 24000000,25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282,26096070
+-r outgroup
+--species tarapotensis,satevis,lilis,isocomma,idae,marsaeus,menophilus,mothone,flavo
+-o ../Relate_results
+-n Example
 ```
 This pipeline will run the analysis and generate an "alignment plot" for the two species of interest around the cortex region.  
-It requires  [SHAPEIT4](https://odelaneau.github.io/shapeit4/), [VCFTOOLS](https://vcftools.github.io), [BCFTOOLS](https://samtools.github.io/bcftools/) and [RELATE](https://myersgroup.github.io/relate/) to work. 
+It requires  [SHAPEIT4](https://odelaneau.github.io/shapeit4/), [VCFTOOLS](https://vcftools.github.io), [BCFTOOLS](https://samtools.github.io/bcftools/), [RELATE](https://myersgroup.github.io/relate/) [Biopython](https://biopython.org), and [TWISST](https://github.com/simonhmartin/twisst) to work. 
 
 ## 1) Population file
 
