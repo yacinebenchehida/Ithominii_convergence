@@ -415,12 +415,12 @@ echo G_OPTION CREATED
 python $TWISST -t "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick  --method complete --groupsFile group.txt $G_OPTION --outputTopos Phylogeny.topos | gzip > Phylogeny.weights.tsv.gz
 
 # 4) Plot twisst results
-Rscript $SCRIPTS/twisst.R "$min_value" "$max_value" 0.05
+Rscript $SCRIPTS/twisst.R "$min_value" "$max_value" 0.008
 
 #####################################
 # 12 - Clean all intermediate files #
 #####################################
-rm *vcf.gz* chrom_names.txt *map *log *_alternative_ancestral_state.frq *_alternative_ancestral_state.txt 
+rm *vcf.gz* chrom_names.txt *map *_alternative_ancestral_state.frq *_alternative_ancestral_state.txt 
 mkdir Other_files
 mv $(ls|grep -v -E "pdf|newick|pos|Other_files") Other_files
 echo RELATE FINISHED RUNNING
