@@ -1,0 +1,450 @@
+#!/bin/bash
+
+###################################
+# Set usage and script parameters #
+###################################
+usage()
+{
+cat << EOF
+./Relate_laucher -v <vcf> -c <chromosome> -s <star_position> -e <end_position> --snps <list_snps> -f <pop_file> -t <list_taxa> -r <root_outgroup> --species <species_list> -o <path_output> -n <name> -h
+
+OPTIONS:
+  -v            Name of the vcf input
+  -c		Contig/Scaffold/Chromosome name
+  -s		Starting position in the VCF
+  -e		End position in the VCF
+  --snps	List of SNPs for which a newick tree will be plotted (comma separated)
+  -f            Population file
+  -t		List of taxa to analyses separated by a comma
+  -r		taxa used to define the ancestral state - if omitted it will use all the samples present in the VCF (provided in -v)
+  --species		A list of species used to define the ancestral state at SNPs where the outgroups do not have data (only 3 samples we will picked from the species name - the species name must occur in the Population file provided in -f) 
+  -o		Output folder  path
+  -n            Prefix used for output files
+  -h            usage information and help (this message)
+EOF
+exit 0
+}
+
+# Parse command-line options
+options=$(getopt -o v:c:s:e:f:t:r:o:n:h --long snps:,species: -- "$@")
+
+# Check for getopt errors
+if [ $? -ne 0 ]; then
+  usage
+fi
+
+# Set the parsed options back to positional parameters
+eval set -- "$options"
+
+# Extract options and their arguments
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+		-v)
+		  VCF=$2
+		  shift 2
+		  ;;
+		-c)
+		  CHR=$2
+		  shift 2
+		  ;;
+		-s)
+		  START=$2
+		  shift 2
+		  ;;
+		-e)
+		  END=$2
+		  shift 2
+		  ;;
+		--snps)
+		  SNPS=$2
+		  shift 2
+		  ;;
+		-f)
+		  POP=$2
+		  shift 2
+		  ;;
+		-t)
+		  TAXA=$2
+		  shift 2
+		  ;;
+		-r)
+                  OUTGROUP=$2
+		  shift 2
+                  ;;
+		--species)
+                  SP=$2
+                  shift 2
+                  ;;
+		-o)
+		  OUTPUT_PATH=$2
+		  shift 2
+		  ;;
+		-n)
+		  PREFIX=$2
+		  shift 2
+		  ;;
+		-h)
+		  usage
+		  ;;
+		--)
+		  shift
+		  break
+		  ;;
+		*)
+		  usage
+		  ;;
+	esac
+done
+
+# Check if all mandatory arguments are provided
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]]
+then
+	usage
+	exit 1
+fi
+
+
+###########################
+# Check if -r has a value #
+###########################
+if [ -n "${OUTGROUP}" ]; then
+    echo "-r option was provided with value: ${OUTGROUP}"
+	# Check if -s is also provided
+	if [ -z "${SP}" ]; then
+        echo "Error: The -s option (species list) must be provided when using the -r option (outgroup)."
+        exit 1
+	fi
+else
+    echo "-r option was not provided or I will use all the samples to define the ancestral state"
+    OUTGROUP="All"
+fi
+
+
+#########################
+# 2 - Display arguments #
+#########################
+echo -e VCF file:"${VCF}"
+echo -e Chromosome:"${CHR}"
+echo -e Start:"${START}"
+echo -e End:"${END}"
+echo -e SNPs:"${SNPS}"
+echo -e Population file:"${POP}"
+echo -e TAXA:"${TAXA}"
+echo -e OUTGROUP:"${OUTGROUP}"
+echo -e SPECIES:"${SP}"
+echo -e Output path:"${OUTPUT_PATH}"
+echo -e Prefix:"${PREFIX}"
+
+
+###################################
+# 2' - SOFTWARE LAODING AND PATHS #
+###################################
+module load  BCFtools/1.19-GCC-13.2.0
+module load R/4.2.1-foss-2022a
+module load VCFtools/0.1.16-GCC-11.2.0
+module load Biopython/1.83-foss-2023a
+module load Armadillo/12.6.2-foss-2023a
+SHAPEIT="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/shapeit4/bin/shapeit4.2"
+RELATE="/mnt/scratch/projects/biol-specgen-2018/edd/software/relate_v1.2.1_x86_64_static"
+TWISST="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/twisst/twisst.py"
+PXRR="/mnt/scratch/projects/biol-specgen-2018/yacine/Tools/phyx/src/pxrr"
+SCRIPTS=$(pwd)
+
+##############################
+# 3 - Get the phenotype file #
+##############################
+# Create working directory
+if [ -d $OUTPUT_PATH/$PREFIX ]; then
+    rm -r $OUTPUT_PATH/$PREFIX
+fi
+mkdir -p $OUTPUT_PATH/$PREFIX
+
+# Create phenotype file
+if [ -f  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt ]; then
+    rm  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+fi
+touch  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+
+SPECIES=$(echo $TAXA|perl -pe 's/,/ /g')
+echo $SPECIES
+for i in $SPECIES; do
+    if [ "$i" == "outgroup" ]; then
+        # If SPECIES is "outgroup", take only the first line
+        cat ${POP} | grep -P "\s$i\s*(\w)*\s*$"|head -n 1 >> $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+    else
+        # For other species, continue with the original grep
+        cat ${POP} | grep -P "\s$i\s*(\w)*\s*$" >> $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+    fi
+done
+
+echo POP FILE READY
+
+# Check if phenotype file contains at least 20 individuals
+NUM_SAM=$(wc -l < "$OUTPUT_PATH/$PREFIX/${PREFIX}_phenotype_file.txt")
+if [ "$NUM_SAM" -lt 20 ]; then
+  echo "NOT ENOUGH SAMPLES IN ${OUTPUT_PATH}/${PREFIX}/${PREFIX}_phenotype_file.txt CANNOT PERFORM THE PHASING"
+  echo "I NEED AT LEAST 20 INGROUP SAMPLES."
+  echo  "QUITTING"
+  exit 1  
+fi
+
+
+###############################################
+# 4 - Get VCF for specific region/individuals #
+###############################################
+# Ingroup
+bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF | bcftools view -U -i 'TYPE=="snp"' -m2 -M2 -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+echo "SUBSETTED VCF FILE READY"
+
+# Outgroup if specified
+if [ "$OUTGROUP" != All ]; then
+	OUTG=$(echo $OUTGROUP|perl -pe 's/,/ /g')
+	for i in $OUTG; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phenotype_file.txt; done
+
+	bcftools view --regions $CHR:$START-$END -T <(bcftools query -f '%CHROM\t%POS\n' $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz) -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroup_phenotype_file.txt|awk '{print $1}') $VCF  > $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf
+	bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf
+	tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf.gz
+	echo "OUTGROUP READY"
+fi
+
+
+#################
+# 5 - phase vcf #
+#################
+echo STARTING PHASING
+$SHAPEIT --input $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz --region $CHR --output $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf 
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz
+echo PHASING PERFORMED
+
+
+#############################################################
+# 6 - Convert VCF to relate input files (*haps and *sample) #
+#############################################################
+## Ingroup
+## Create VCF with human chromosome names
+echo -e $CHR"\t"1 > $OUTPUT_PATH/$PREFIX/chrom_names.txt
+bcftools annotate --rename-chrs $OUTPUT_PATH/$PREFIX/chrom_names.txt $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased.vcf.gz -o $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz
+echo VCF RENAMED
+
+# Create a Relate linkage map from the plink linkage map
+Rscript ./createuniformrecmap.r $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed.vcf.gz LM.bed
+
+# Create inputs required by Relate (haps and sample) in ingroup
+$RELATE/bin/RelateFileFormats \
+                 --mode ConvertFromVcf \
+                 --haps  $OUTPUT_PATH/$PREFIX/"$PREFIX".haps \
+                 --sample  $OUTPUT_PATH/$PREFIX/"$PREFIX".sample \
+                 -i $OUTPUT_PATH/$PREFIX/"$PREFIX"_phased_renamed
+echo HAPS AND SAMPLE FILE GENERATED
+
+############################################################################################
+# 7 - Use all samples (defaults) or outgroup to set ancestral and derived alleles and flip #
+############################################################################################
+## 1) Generate the VCF that is going to be used to set the ancestral state
+if [ "$OUTGROUP" != All ]; then
+	# Find name outgroups and write --indv command
+	indv_command=$(for i in $(bcftools query -l  $OUTPUT_PATH/$PREFIX/"$PREFIX"_outgroups.vcf.gz); do echo -e "--indv $i"; done |perl -pe 's/\n/ /g')
+	echo $indv_command
+	ANC_STATE_VCF="$OUTPUT_PATH/$PREFIX/${PREFIX}_outgroups.vcf.gz"
+else
+	bcftools view --regions $CHR:$START-$END $VCF |  bcftools view -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX"_ALL_samples.vcf
+	bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX"_ALL_samples.vcf
+	tabix $OUTPUT_PATH/$PREFIX/"$PREFIX"_ALL_samples.vcf.gz
+	ANC_STATE_VCF="${OUTPUT_PATH}/${PREFIX}/${PREFIX}_ALL_samples.vcf.gz"
+fi
+
+## 2) Get the allele frequencies of the outgroups 
+vcftools --gzvcf $ANC_STATE_VCF --freq $indv_command --out $OUTPUT_PATH/$PREFIX/outgroups
+echo ALLELE FREQUENCIES ESTIMATED FOR OUTGROUPS
+
+## 3) Get ancestral alleles for position/SNPs called in the outgroup
+awk '{
+    split($5, ref, ":"); 
+    split($6, alt, ":"); 
+    if (ref[2] == "-nan") { 
+        print $2, "nan"; 
+    } else if (ref[2] > 0.5) { 
+        print $2, ref[1]; 
+    } else if (ref[2] == 0.5) { 
+        print $2, "nan"; 
+    } else { 
+        print $2, alt[1]; 
+    }
+}' <(grep -v CHROM $OUTPUT_PATH/$PREFIX/outgroups.frq) > $OUTPUT_PATH/$PREFIX/ancestral.alleles
+
+## 4) Keep only SNPs available in the hap file
+grep -f <(awk '{print $3}' $OUTPUT_PATH/$PREFIX/"$PREFIX".haps) $OUTPUT_PATH/$PREFIX/ancestral.alleles > $OUTPUT_PATH/$PREFIX/filtered_ancestral.alleles
+mv $OUTPUT_PATH/$PREFIX/filtered_ancestral.alleles  $OUTPUT_PATH/$PREFIX/ancestral.alleles
+echo ANCESTRAL STATE DEFINED BASED ON OUTGROUP
+
+## 5)  Get ancestral alleles for position/SNPs absent in the outgroup
+SPC=$(echo $SP|perl -pe 's/,/ /g')
+for i in $SPC; do cat ${POP}| grep $i >>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_species_ancestral_state_phenotype_file.txt; done
+ALT_ANC="${OUTPUT_PATH}/${PREFIX}/${PREFIX}_species_ancestral_state_phenotype_file.txt"
+
+# Loop through each species and select up to 3 individuals
+for i in $SPC; do
+    # Extract lines containing the species
+    grep "$i" $ALT_ANC > $OUTPUT_PATH/$PREFIX/tmp_matching.txt
+
+    # Get the number of matching lines
+    count=$(cat $OUTPUT_PATH/$PREFIX/tmp_matching.txt|wc -l)
+    echo $count
+    # Select lines randomly (up to 3)
+    if [ $count -gt 0 ]; then
+        if [ $count -ge 3 ]; then
+            shuf -n 3  $OUTPUT_PATH/$PREFIX/tmp_matching.txt > "$OUTPUT_PATH/$PREFIX/${i}_alternative_ancestral_state.txt"
+        else
+            cat $OUTPUT_PATH/$PREFIX/tmp_matching.txt > "$OUTPUT_PATH/$PREFIX/${i}_alternative_ancestral_state.txt"
+        fi
+    fi
+
+    # Create a VCF file with the select 3 individuals
+    bcftools view --regions $CHR:$START-$END  -T <(bcftools query -f '%CHROM\t%POS\n' $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz) -S <(cat "$OUTPUT_PATH/$PREFIX/${i}_alternative_ancestral_state.txt"|awk '{print $1}') $VCF  > "$OUTPUT_PATH/$PREFIX/${i}_${PREFIX}_alternative_ancestral_state.vcf"
+    bgzip "$OUTPUT_PATH/$PREFIX/${i}_${PREFIX}_alternative_ancestral_state.vcf"
+    tabix "$OUTPUT_PATH/$PREFIX/${i}_${PREFIX}_alternative_ancestral_state.vcf.gz"
+
+    # Get allelic frequencies
+    vcftools --gzvcf "$OUTPUT_PATH/$PREFIX/${i}_${PREFIX}_alternative_ancestral_state.vcf.gz" --freq --out "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state"
+
+    # Keep only SNPs present in the haps file and that are nan in outgroup 
+    grep -f <(awk '{print $3}' $OUTPUT_PATH/$PREFIX/"$PREFIX".haps) "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state.frq" > "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state_bis"
+    grep -f <(cat $OUTPUT_PATH/$PREFIX/ancestral.alleles|grep nan |awk '{ print $1}') "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state_bis" >  "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state_3"
+    mv "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state_3" "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state.frq"
+    rm "$OUTPUT_PATH/$PREFIX/${i}_outgroups_alternative_ancestral_state_bis" 
+done
+
+rm $OUTPUT_PATH/$PREFIX/tmp_matching.txt
+
+# Set the final ancestral states for position/SNPs absent in the outgroup based on allele frequencies in all taxa
+Rscript ./Find_Alternative_ancestral.r $SP $OUTPUT_PATH/$PREFIX $OUTPUT_PATH/$PREFIX/"$PREFIX".haps
+
+## 6) Swap the ancestral state in the haps file 
+awk 'FNR==NR {x2[NR] = $1; next}
+  {if(x2[FNR]==$5){ref=$5; alt=$4; $4=ref; $5=alt; 
+  for(i=6;i<=NF;i++) if($i==0) $i=1; else $i=0}; print}' \
+$OUTPUT_PATH/$PREFIX/ancestral.alleles $OUTPUT_PATH/$PREFIX/"$PREFIX".haps > $OUTPUT_PATH/$PREFIX/"$PREFIX"_ancestral_state.haps
+
+echo ANCESTRAL STATE DEFINED
+
+#######################################################
+# 8 - Generate the pop label file with the sex column #
+#######################################################
+(echo -e sample"\t"population"\t"group"\t"sex; awk '{print $0"\t"0}'  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt) > $OUTPUT_PATH/$PREFIX/"$PREFIX"_relate.poplabels
+echo RELATE POPLABELS READY
+
+##################
+# 9 - Run RELATE #
+##################
+cd  $OUTPUT_PATH/$PREFIX
+
+$RELATE/bin/Relate \
+                 --mode All \
+                 -m 2.9e-9 \
+                 -N 20000000 \
+                 --haps "$PREFIX"_ancestral_state.haps \
+                 --sample "$PREFIX".sample \
+                 --map "$PREFIX"*plink.map \
+                 --seed $RANDOM -o $PREFIX
+echo RELATE RUN
+
+#############################
+# 10 - Extract specific SNPs #
+#############################
+# 1) Get list of SNPs
+SNP=$(echo $SNPS|perl -pe 's/,/ /g')
+# 2) Identified the genomic interval to extract from the relate results
+min_value=
+max_value=
+
+# Iterate through the list of snps positions to find minimum and maximum
+for num in $SNP; do
+# If min_value is unset or current number is less than min_value, update min_value
+    if [[ -z "$min_value" || "$num" -lt "$min_value" ]]; then
+        min_value="$num"
+    fi
+
+    # If max_value is unset or current number is greater than max_value, update max_value
+    if [[ -z "$max_value" || "$num" -gt "$max_value" ]]; then
+        max_value="$num"
+    fi
+done
+
+# 3) Extract Relate results between the minimum and maximum SNPs position
+# Run RelateExtract
+$RELATE/bin/RelateExtract \
+                 --mode AncToNewick \
+                 --haps "$PREFIX"_ancestral_state.haps \
+                 --sample "$PREFIX".sample \
+                 --anc  "$PREFIX".anc \
+                 --mut "$PREFIX".mut \
+                 --first_bp $min_value\
+                 --last_bp $max_value\
+                 --poplabels "$PREFIX"_relate.poplabels \
+                 -o "$PREFIX"_"$CHR"_"$min_value"-"$max_value"
+
+# Rename samples with ID_species 
+python3 $SCRIPTS/rename_tree.py "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick <(awk '{print $1"_"$2}' "$PREFIX"_phenotype_file.txt) "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick
+echo RELATE RESULTS EXTRACTED
+
+# Root trees
+#OUT=$(cat group.txt| grep ${OUTGROUP}|awk '{print $1}'|perl -pe 's/\n/,/g'|perl -pe 's/,$//g')
+#echo $OUT
+#$PXRR -t "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick -g ${OUT} -o "$PREFIX"_"$CHR"_"$min_value"-"$max_value"_rooted.newick
+#mv "$PREFIX"_"$CHR"_"$min_value"-"$max_value"_rooted.newick "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick
+#echo NEWICK ROOTED
+
+
+# 4) Plot Tree for the specified SNPs
+# Extract SNPs
+for i in $SNP; do \
+$RELATE/scripts/TreeView/TreeView.sh \
+                --haps "$PREFIX"_ancestral_state.haps \
+                --sample "$PREFIX".sample \
+                --anc "$PREFIX".anc \
+                --mut "$PREFIX".mut \
+                --poplabels "$PREFIX"_relate.poplabels \
+                --bp_of_interest $i \
+                --years_per_gen 1 \
+		-o "$PREFIX"_"$i"
+
+# Extract tree for the SNPs of interest
+python3 $SCRIPTS/tree_extract.py "$PREFIX"_"$CHR"_"$min_value"-"$max_value".pos  "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick $i $PREFIX
+Rscript $SCRIPTS/plot_tree.R -t "$PREFIX"_"$i".newick -o "$PREFIX"_"$i"_replotted_tree.pdf
+
+done
+
+###################
+# 11 - Run twisst #
+###################
+# 1) Get positions input for twisst
+echo -e start"\t"end > positions.txt
+python3 $SCRIPTS/position_4_twisst.py *pos >> positions.txt
+echo POSITION FILE READY
+
+# 2) Create G_OPTION
+G_OPTION=$(cat group.txt| awk '{print $2}'|sort|uniq|perl -pe 's/(.+)\n/-g $1 /g')
+echo $G_OPTION
+echo G_OPTION CREATED
+
+# 3) RUN TWISST
+python $TWISST -t "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick  --method complete --groupsFile group.txt $G_OPTION --outgroup outgroup --outputTopos Phylogeny.topos | gzip > Phylogeny.weights.tsv.gz
+
+# 4) Plot twisst results
+Rscript $SCRIPTS/twisst.R "$min_value" "$max_value" 0.01
+
+#####################################
+# 12 - Clean all intermediate files #
+#####################################
+rm *vcf.gz* chrom_names.txt *map *log *_alternative_ancestral_state.frq *_alternative_ancestral_state.txt 
+mkdir Other_files
+mv $(ls|grep -v -E "pdf|newick|pos|Other_files") Other_files
+echo RELATE FINISHED RUNNING
+
+
+# Usage example:./Relate_launcher_V4 -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25956241 -e 26031063 -f ../Inputs/Input_2_use.txt -t mothone,isocomma,satevis,marsaeus_rileyi,marsaeus_phasiana,marsaeus_macaria,lilis --snps 25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282 -r outgroup --species menophilus,satevis,mothone,flavo -o . -n test
+
