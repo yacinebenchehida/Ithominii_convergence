@@ -40,7 +40,7 @@ def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_p
 
             # Run the phylogenetic analysis based on the specified method
             if phylo_method == "NJ":
-                job_file.write(f"Rscript ./NJ_tree.R {vcf}.gz\n")  # Modify with your NJ script command
+                job_file.write(f"Rscript NJ_tree.R {result_dir}/{prefix}*.phy {result_dir}\n")
             elif phylo_method == "ML":
                 job_file.write(f"raxml-ng-mpi --search --msa {result_dir}/{prefix}*.phy --model GTR+G+I --threads 8 --force perf_threads --prefix {result_dir}/{prefix}\n")
                 
