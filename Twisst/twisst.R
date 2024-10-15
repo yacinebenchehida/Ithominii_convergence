@@ -325,31 +325,30 @@ dev.off()
 
 # Extract coordinate for each window and prepare it in the format expected by twisst
 window_data_file = 'positions.txt'
-window_data = read.table(window_data_file, header = T)
+window_data = read.table(window_data_file)
 colnames(window_data) = c("start","end")
 window_data$mid = (window_data$start + window_data$end) / 2
 window_data$sites <- window_data$end - window_data$start + 1
+
 
 # Plots stacked barplot without smoothing
 pdf("twisst_barplot_no_smoothing.pdf",12,8)
 par(mfrow =c(1,1), mar = c(3,3,1,1), xpd = FALSE)
 # Plot barplot
-if(length(args) != 8){
+if(length(args) != 7){
 	plot.weights(weights_dataframe=weights, positions=cbind(window_data$start,window_data$end),
              line_cols=NA, lwd= 0, fill_cols= colors,stacked=TRUE,xlim =c(as.numeric(args[1]),as.numeric(args[2])))
-}
-else(length(args) == 8) {
+}else {
   peak_start <- as.numeric(args[6])
   peak_end <- as.numeric(args[7])
   plot_area <- region2plot(peak_start,peak_end)
-  
+
   plot.weights(weights_dataframe=weights, positions=cbind(window_data$start,window_data$end),
-            line_cols=NA, lwd= 0, fill_cols= colors,stacked=TRUE,xlim =c(plot_area$start_plot,plot_area$end_plot))
-            message("Using PEAK_START and PEAK_END")
-  			
-  			# Add peak positions
-			rect(xleft=peak_start, ybottom=0, xright=peak_end, ytop=1,
-     		col=NULL, border="black",lwd=3)
+            line_cols=NA, lwd= 0, fill_cols= colors,stacked=TRUE,xlim =c(as.numeric(plot_area$start_plot),as.numeric(plot_area$end_plot)))
+ 
+ # Add peak positions
+  rect(xleft=peak_start, ybottom=0, xright=peak_end, ytop=1,
+     col=NULL, border="black",lwd=3)
 }
 dev.off()
 
@@ -360,11 +359,10 @@ weights_smooth = smooth.weights(window_positions=window_data$mid, weights_datafr
 pdf("twisst_barplot_with_smoothing.pdf",12,8)
 par(mfrow =c(1,1), mar = c(3,3,1,1), xpd = FALSE)
 
-if(length(args) != 8){       
+if(length(args) != 7){       
        plot.weights(weights_dataframe=weights_smooth, positions=window_data$mid,
              line_cols=cols, fill_cols=colors,stacked=TRUE,xlim = c(as.numeric(args[1]), as.numeric(args[2])))
-}
-else{
+}else{
 	plot.weights(weights_dataframe=weights_smooth, positions=window_data$mid,
              line_cols=cols, fill_cols=colors,stacked=TRUE,xlim = c(plot_area$start_plot,plot_area$end_plot))
 	# Add peak positions    
@@ -373,15 +371,23 @@ else{
 } 
 dev.off()
 
-if(length(args) == 8){
+print("BARPLOTS PLOTTED")
+
+if(length(args) == 7){
+	print("STARTING PERMUTATIONS")
+	introgression_topo <- weights[,c(introgression_topo)]
+	introgression_data <- as.data.frame(cbind(window_data,introgression_topo))
+
 	n_permutations <- 10000
-	block_size <- 20000 
+	block_size <- 100000 
 	
+	print("PERMUTATIONS INTER BLOCKS")
 	block_between_permutations_results <- block_evaluation(n_permutations,block_size,peak_start,peak_end,introgression_data)
+	print("PERMUTATIONS INTER AND INTRA BLOCKS")
 	block_between_within_permutations_results <- block_intra_shuffling_evaluation_(n_permutations,block_size,peak_start,peak_end,introgression_data)
 	
 	results <- as.data.frame(do.call(cbind,c(block_between_permutations_results,block_between_within_permutations_results)))
-	colnames(zscore_results) = c("zscore_inter","pvalue_inter","zscore_inter_intra","zscore_inter_intra")
+	colnames(results) = c("zscore_inter","pvalue_inter","zscore_inter_intra","zscore_inter_intra")
 	
-	write.table(file = "significance.txt", x = zscore_results,quote = FALSE,sep = "\t",row.names = FALSE,col.names = TRUE)
+	write.table(file = "significance.txt", x = results,quote = FALSE,sep = "\t",row.names = FALSE,col.names = TRUE)
 }
