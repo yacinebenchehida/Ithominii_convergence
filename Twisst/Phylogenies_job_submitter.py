@@ -2,7 +2,7 @@ import os
 import glob
 import argparse
 
-def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_path):
+def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_path, job_name):
     # Define the job script name
     job_script_name = f"job_{group_number}.sh"
     job_script_path = os.path.join(job_dir, job_script_name)
@@ -10,11 +10,11 @@ def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_p
     # Create the SLURM job script
     with open(job_script_path, 'w') as job_file:
         job_file.write("#!/bin/bash\n")
-        job_file.write("#SBATCH --job-name=phylo_job\n") 
+        job_file.write(f"#SBATCH --job-name={job_name}_{group_number}\n")  # Use the provided job name
         job_file.write("#SBATCH --time=05:00:00\n")
         job_file.write("#SBATCH --ntasks=1\n") 
         job_file.write("#SBATCH --cpus-per-task=8\n")
-        job_file.write("#SBATCH --mem=5G\n") 
+        job_file.write("#SBATCH --mem=3G\n") 
         job_file.write("#SBATCH --account=BIOL-SPECGEN-2018\n")
         
         # Load necessary modules if needed (uncomment and modify)
@@ -41,7 +41,7 @@ def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_p
             # Run the phylogenetic analysis based on the specified method
             if phylo_method == "NJ":
                 job_file.write(f"Rscript NJ_tree.R {result_dir}/{prefix}*.phy {result_dir}\n")
-		job_file.write(f"find {result_dir} ! -name '*.newick' -type f -delete\n")
+                job_file.write(f"find {result_dir} ! -name '*.newick' -type f -delete\n")
             elif phylo_method == "ML":
                 job_file.write(f"raxml-ng-mpi --search --msa {result_dir}/{prefix}*.phy --model GTR+G+I --threads 8 --force perf_threads --prefix {result_dir}/{prefix}\n")
                 job_file.write(f"find {result_dir} ! -name '*.bestTree' -type f -delete\n")
@@ -52,7 +52,7 @@ def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_p
     return job_script_path
 
 
-def submit_jobs(vcf_directory, phylo_method, job_dir, output_path):
+def submit_jobs(vcf_directory, phylo_method, job_dir, output_path, job_name):
     # Create output directory for job scripts if it doesn't exist
     os.makedirs(job_dir, exist_ok=True)
 
@@ -60,13 +60,13 @@ def submit_jobs(vcf_directory, phylo_method, job_dir, output_path):
     vcf_files = sorted(glob.glob(os.path.join(vcf_directory, '*.vcf')))
     total_files = len(vcf_files)
     
-    # Group files into batches of 200
-    for i in range(0, total_files, 200):
-        group_number = (i // 200) + 1  # Batch number
-        batch_files = vcf_files[i:i + 200]  # Get the next 20 files (or less for the last batch)
+    # Group files into batches of 100
+    for i in range(0, total_files, 100):
+        group_number = (i // 100) + 1  # Batch number
+        batch_files = vcf_files[i:i + 100]  # Get the next 100 files (or less for the last batch)
 
         # Create SLURM job script for this batch
-        job_script_path = create_slurm_script(group_number, batch_files, phylo_method, job_dir, output_path)
+        job_script_path = create_slurm_script(group_number, batch_files, phylo_method, job_dir, output_path, job_name)
 
         # Submit the job to SLURM
         os.system(f"sbatch {job_script_path}")  # Submit job script
@@ -80,9 +80,10 @@ if __name__ == "__main__":
     parser.add_argument("phylo_method", choices=["NJ", "ML"], help="Phylogenetic method to use ('NJ' or 'ML').")
     parser.add_argument("job_dir", help="Directory to save SLURM job scripts.")
     parser.add_argument("output_path", help="Directory to save output PHYLIP files.")
+    parser.add_argument("job_name", help="Name for the SLURM job.")
 
     # Parse arguments
     args = parser.parse_args()
 
     # Call the function with command line arguments
-    submit_jobs(args.vcf_directory, args.phylo_method, args.job_dir, args.output_path)
+    submit_jobs(args.vcf_directory, args.phylo_method, args.job_dir, args.output_path, args.job_name)
