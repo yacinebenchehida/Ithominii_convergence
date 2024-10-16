@@ -139,7 +139,7 @@ main <- function(taxa1, taxa2, trees) {
 region2plot <- function(peak_start,peak_end){
   mid <- (peak_start + peak_end)/2
   
-  return(list(start_plot= mid - 100000, end_plot = mid + 100000))
+  return(list(start_plot= mid - 250000, end_plot = mid + 250000))
 }
 
 # BLOCK PERMMUTATIONS (no within block shuffling) - block of constant size user defined
@@ -330,7 +330,6 @@ colnames(window_data) = c("start","end")
 window_data$mid = (window_data$start + window_data$end) / 2
 window_data$sites <- window_data$end - window_data$start + 1
 
-
 # Plots stacked barplot without smoothing
 pdf("twisst_barplot_no_smoothing.pdf",12,8)
 par(mfrow =c(1,1), mar = c(3,3,1,1), xpd = FALSE)
@@ -354,16 +353,25 @@ dev.off()
 
 
 # Plot stacked barplot with smoothing
-weights_smooth = smooth.weights(window_positions=window_data$mid, weights_dataframe = weights,
-                                span = as.numeric(args[3]), window_sites=window_data$sites)
 pdf("twisst_barplot_with_smoothing.pdf",12,8)
 par(mfrow =c(1,1), mar = c(3,3,1,1), xpd = FALSE)
 
-if(length(args) != 7){       
+if(length(args) != 7){
+       weights_smooth = smooth.weights(window_positions=window_data$mid, weights_dataframe = weights,
+                                span = as.numeric(args[3]), window_sites=window_data$sites)       
        plot.weights(weights_dataframe=weights_smooth, positions=window_data$mid,
              line_cols=cols, fill_cols=colors,stacked=TRUE,xlim = c(as.numeric(args[1]), as.numeric(args[2])))
 }else{
-	plot.weights(weights_dataframe=weights_smooth, positions=window_data$mid,
+	# Need to define the genomics interval that would be smoothed. To be sure the smoothing is constant between different plots.
+	initial <- as.numeric(row.names(window_data[window_data$start >= plot_area$start_plot & window_data$end <= plot_area$end_plot,])[1])
+	the_end <- as.numeric(row.names(tail(window_data[window_data$start >= plot_area$start_plot & window_data$end <= plot_area$end_plot,],1)))
+	position2besmoothed <- window_data[window_data$start >= plot_area$start_plot & window_data$end <= plot_area$end_plot,]
+	tobesmoothed <- weights[c(initial:the_end),]
+
+	weights_smooth = smooth.weights(window_positions=position2besmoothed$mid, weights_dataframe = tobesmoothed,
+                                span = as.numeric(args[3]), window_sites=position2besmoothed$sites)
+
+	plot.weights(weights_dataframe=weights_smooth, positions=position2besmoothed$mid,
              line_cols=cols, fill_cols=colors,stacked=TRUE,xlim = c(plot_area$start_plot,plot_area$end_plot))
 	# Add peak positions    
 	rect(xleft=peak_start, ybottom=0, xright=peak_end, ytop=1,
@@ -379,7 +387,7 @@ if(length(args) == 7){
 	introgression_data <- as.data.frame(cbind(window_data,introgression_topo))
 
 	n_permutations <- 10000
-	block_size <- 100000 
+	block_size <- 50000 
 	
 	print("PERMUTATIONS INTER BLOCKS")
 	block_between_permutations_results <- block_evaluation(n_permutations,block_size,peak_start,peak_end,introgression_data)
