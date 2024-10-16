@@ -1,3 +1,12 @@
+#!/bin/bash
+#SBATCH --time=01:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=5G 
+#SBATCH --account=BIOL-SPECGEN-2018 
+#SBATCH --job-name=LauTwisst
+
 ###################################
 # Set usage and script parameters #
 ###################################
@@ -166,21 +175,23 @@ echo POP FILE READY
 # Create VCF for genomics regions of interest and species of interest #
 #######################################################################
 # Create VCF with the total region of intrest
-bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF| bcftools view -m2 -v snps -O v > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+#bcftools view -m2 -v snps -O v
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
 echo "SUBSETTED VCF FILE READY"
 
 # Create VCFs with 100 SNPs each
 echo -e "STARTED SPLITTING VCF INTO SMALLER VCF WITH $SNPS SNPS EACH"
-python3 ./splice.py $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz  $OUTPUT_PATH/$PREFIX/$PREFIX $SNPS $OUTPUT_PATH/$PREFIX/"$PREFIX".txt
+python3 ./splice_VCF_constant_SNPs.py $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz  $OUTPUT_PATH/$PREFIX/$PREFIX $SNPS $OUTPUT_PATH/$PREFIX/"$PREFIX".txt
 echo "SPLITTING FINISHED"
 
 #########################################
 # gzip and infer phylogeny for each vcf #
 #########################################
-job_name=$(echo $TAXA|perl -pe 's/\w+(\w)[,\n]/$1_/g')
-python3 ./Phylogenies_job_submitter.py $PREFIX $METHOD $OUTPUT_PATH/$PREFIX $OUTPUT_PATH/$PREFIX $job_name
+job_name=$(echo $TAXA|perl -pe 's/\w+(\w\w)[,\n]/$1_/g')
+echo $job_name
+python3 ./Phylogenies_job_submitter.py $OUTPUT_PATH/$PREFIX $METHOD $OUTPUT_PATH/$PREFIX $OUTPUT_PATH/$PREFIX $job_name
 
 #############################################################
 # Combine topologies into a single file + TWISST + plotting #
@@ -197,4 +208,4 @@ sbatch --dependency=aftercorr:$running_jobs1 ./run_twisst.sh $OUTPUT_PATH/$PREFI
 
 
 
-# USAGE example: ./launch_twisst -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25565242 -e 26521063 --snps 50 -f /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/Relate/Inputs/hindwing_black.txt -t mothone,satevis,marsaeus_rileyi,marsaeus_phasiana -m NJ -o ./ -n test_v2 --introg marsaeus_rileyi,mothone --ps 25965242 --pe 26021063
+# USAGE example: ./launch_twisst -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25565242 -e 26521063 --snps 50 -f /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/Relate/Inputs/hindwing_black.txt -t mothone,satevis,marsaeus_rileyi,marsaeus_phasiana -m NJ -o ./ -n test_v2 --introg marsaeus_rileyi,mothone --ps 25965242 --pe 26021063 
