@@ -386,7 +386,7 @@ if(length(args) == 7){
 	introgression_topo <- weights[,c(introgression_topo)]
 	introgression_data <- as.data.frame(cbind(window_data,introgression_topo))
 
-	n_permutations <- 10000
+	n_permutations <- 50000
 	block_size <- 50000 
 	
 	print("PERMUTATIONS INTER BLOCKS")
