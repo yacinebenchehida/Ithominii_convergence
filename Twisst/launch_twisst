@@ -1,0 +1,200 @@
+###################################
+# Set usage and script parameters #
+###################################
+usage()
+{
+cat << EOF
+./launch_twisst -v <vcf> -c <chromosome> -s <star_position> -e <end_position> --snps <number_snps> -f <pop_file> -t <list_taxa> -m <method>  -o <path_output> -n <name> --introg <two_species_names> --ps <peak_start> --pe <peak_end> -h
+
+OPTIONS:
+  -v            Input VCF file name
+  -c		Contig/Scaffold/Chromosome name
+  -s		Starting position in the VCF
+  -e		End position in the VCF
+  --snps	Number of SNPs to include in each sliding window. Each window will have the same number of sites. This will lead to different absolute sizes for windows in terms of genome coordinates.
+  -f            Population file
+  -t		List of taxa to analyses (comma-separated)
+  -m		NJ (using ape)/ML (using Raxml-NG)
+  -o		Output folder  path
+  -n            Prefix for output files
+  --introg	The names of two species to test for introgression (comma separated)
+  --ps		Peak start position
+  --pe		Peak end position
+  -h            usage information and help (this message)
+EOF
+exit 0
+}
+
+# Parse command-line options
+options=$(getopt -o v:c:s:e:f:t:m:o:n:h --long snps:,introg:,ps:,pe: -- "$@")
+
+# Check for getopt errors
+if [ $? -ne 0 ]; then
+  usage
+fi
+
+# Set the parsed options back to positional parameters
+eval set -- "$options"
+
+# Extract options and their arguments
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+		-v)
+		  VCF=$2
+		  shift 2
+		  ;;
+		-c)
+		  CHR=$2
+		  shift 2
+		  ;;
+		-s)
+		  START=$2
+		  shift 2
+		  ;;
+		-e)
+		  END=$2
+		  shift 2
+		  ;;
+		--snps)
+		  SNPS=$2
+		  shift 2
+		  ;;
+		-f)
+		  POP=$2
+		  shift 2
+		  ;;
+		-t)
+		  TAXA=$2
+		  shift 2
+		  ;;
+		-m)
+                  METHOD=$2
+                  shift 2
+                  ;;
+		-o)
+		  OUTPUT_PATH=$2
+		  shift 2
+		  ;;
+		-n)
+		  PREFIX=$2
+		  shift 2
+		  ;;
+                --introg)
+                  INTROG_SP=$2
+                  shift 2
+                  ;;
+		--ps)
+		  PEAK_START=$2
+		  shift 2
+		  ;;
+		--pe)
+                  PEAK_END=$2
+                  shift 2
+                  ;;
+		-h)
+		  usage
+		  ;;
+		--)
+		  shift
+		  break
+		  ;;
+		*)
+		  usage
+		  ;;
+	esac
+done
+
+# Check if all mandatory arguments are provided
+if [[ -z $VCF ]] || [[ -z $CHR ]] || [[ -z $START ]] || [[ -z $END ]] || [[ -z $SNPS ]] || [[ -z $POP ]] || [[ -z $TAXA ]] || [[ -z $METHOD ]] || [[ -z $OUTPUT_PATH ]] || [[ -z $PREFIX ]] || [[ -z $INTROG_SP ]] 
+then
+	usage
+	exit 1
+fi
+
+#########################
+# 2 - Display arguments #
+#########################
+echo -e VCF file:"${VCF}"
+echo -e Chromosome:"${CHR}"
+echo -e Start:"${START}"
+echo -e End:"${END}"
+echo -e Number of SNPs per window:"${SNPS}"
+echo -e Population file:"${POP}"
+echo -e TAXA:"${TAXA}"
+echo -e METHOD:"${METHOD}"
+echo -e INTROG_SP:"${INTROG_SP}"
+echo -e Output path:"${OUTPUT_PATH}"
+echo -e Prefix:"${PREFIX}"
+
+if [[ -z "${PEAK_START}" || -z "${PEAK_END}" ]]; then
+	echo -e Peak start: Not provided
+	echo -e Peak end:Not provided
+else
+	echo -e Peak start:"${PEAK_START}"
+	echo -e Peak end:"${PEAK_END}"
+fi
+
+###################################
+# 2' - SOFTWARE LAODING AND PATHS #
+###################################
+module load BCFtools/1.19-GCC-13.2.0
+SCRIPTS=$(pwd)
+
+##############################
+# 3 - Get the phenotype file #
+##############################
+# Create working directory
+if [ -d $OUTPUT_PATH/$PREFIX ]; then
+    rm -r $OUTPUT_PATH/$PREFIX
+fi
+mkdir -p $OUTPUT_PATH/$PREFIX
+
+# Create phenotype file
+if [ -f  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt ]; then
+    rm  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+fi
+touch  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt
+
+SPECIES=$(echo $TAXA|perl -pe 's/,/ /g')
+echo $SPECIES
+for i in $SPECIES; do cat ${POP}| grep -P "\s$i\s*(\w)*\s*$"|awk '{print $1"\t"$2}'>>  $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt; done
+echo POP FILE READY
+
+
+#######################################################################
+# Create VCF for genomics regions of interest and species of interest #
+#######################################################################
+# Create VCF with the total region of intrest
+bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF| bcftools view -m2 -v snps -O v > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
+echo "SUBSETTED VCF FILE READY"
+
+# Create VCFs with 100 SNPs each
+echo -e "STARTED SPLITTING VCF INTO SMALLER VCF WITH $SNPS SNPS EACH"
+python3 ./splice.py $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz  $OUTPUT_PATH/$PREFIX/$PREFIX $SNPS $OUTPUT_PATH/$PREFIX/"$PREFIX".txt
+echo "SPLITTING FINISHED"
+
+#########################################
+# gzip and infer phylogeny for each vcf #
+#########################################
+job_name=$(echo $TAXA|perl -pe 's/\w+(\w)[,\n]/$1_/g')
+python3 ./Phylogenies_job_submitter.py $PREFIX $METHOD $OUTPUT_PATH/$PREFIX $OUTPUT_PATH/$PREFIX $job_name
+
+#############################################################
+# Combine topologies into a single file + TWISST + plotting #
+#############################################################
+running_jobs1=$(squeue|grep "$(whoami)"|grep $job_name| awk '{print $1}'|perl -pe 's/\n/,/g'|sed 's/,$//g')
+echo $running_jobs1
+INTROGRESSED_TAXA1=$(echo ${INTROG_SP}|perl -pe 's/,/\t/g'|awk '{print $1}')
+echo $INTROGRESSED_TAXA1
+INTROGRESSED_TAXA2=$(echo ${INTROG_SP}|perl -pe 's/,/\t/g'|awk '{print $2}')
+echo $INTROGRESSED_TAXA2
+
+sbatch --dependency=aftercorr:$running_jobs1 ./run_twisst.sh $OUTPUT_PATH/$PREFIX $PREFIX $START $END $INTROGRESSED_TAXA1 $INTROGRESSED_TAXA2 $PEAK_START $PEAK_END $(pwd)
+
+
+
+
+# USAGE example: ./launch_twisst -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25565242 -e 26521063 --snps 50 -f /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/Relate/Inputs/hindwing_black.txt -t mothone,satevis,marsaeus_rileyi,marsaeus_phasiana -m NJ -o ./ -n test_v2 --introg marsaeus_rileyi,mothone --ps 25965242 --pe 26021063
