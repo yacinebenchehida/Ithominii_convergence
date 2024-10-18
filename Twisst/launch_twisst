@@ -189,7 +189,7 @@ echo "SPLITTING FINISHED"
 #########################################
 # gzip and infer phylogeny for each vcf #
 #########################################
-job_name=$(echo $TAXA|perl -pe 's/\w+(\w\w)[,\n]/$1_/g')
+job_name=$(echo $TAXA|perl -pe 's/\w+(\w)[,\n]/$1/g')
 echo $job_name
 python3 ./Phylogenies_job_submitter.py $OUTPUT_PATH/$PREFIX $METHOD $OUTPUT_PATH/$PREFIX $OUTPUT_PATH/$PREFIX $job_name
 
@@ -203,7 +203,7 @@ echo $INTROGRESSED_TAXA1
 INTROGRESSED_TAXA2=$(echo ${INTROG_SP}|perl -pe 's/,/\t/g'|awk '{print $2}')
 echo $INTROGRESSED_TAXA2
 
-sbatch --dependency=aftercorr:$running_jobs1 ./run_twisst.sh $OUTPUT_PATH/$PREFIX $PREFIX $START $END $INTROGRESSED_TAXA1 $INTROGRESSED_TAXA2 $PEAK_START $PEAK_END $(pwd)
+sbatch --dependency=aftercorr:$running_jobs1 --job-name="twi${job_name}" ./run_twisst.sh $OUTPUT_PATH/$PREFIX $PREFIX $START $END $INTROGRESSED_TAXA1 $INTROGRESSED_TAXA2 $PEAK_START $PEAK_END $(pwd)
 
 
 
