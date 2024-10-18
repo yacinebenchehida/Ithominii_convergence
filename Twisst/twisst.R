@@ -387,7 +387,7 @@ if(length(args) == 7){
 	introgression_data <- as.data.frame(cbind(window_data,introgression_topo))
 
 	n_permutations <- 50000
-	block_size <- 50000 
+	block_size <- 100000 
 	
 	print("PERMUTATIONS INTER BLOCKS")
 	block_between_permutations_results <- block_evaluation(n_permutations,block_size,peak_start,peak_end,introgression_data)
@@ -395,7 +395,7 @@ if(length(args) == 7){
 	block_between_within_permutations_results <- block_intra_shuffling_evaluation_(n_permutations,block_size,peak_start,peak_end,introgression_data)
 	
 	results <- as.data.frame(do.call(cbind,c(block_between_permutations_results,block_between_within_permutations_results)))
-	colnames(results) = c("zscore_inter","pvalue_inter","zscore_inter_intra","zscore_inter_intra")
+	colnames(results) = c("zscore_inter","pvalue_inter","zscore_inter_intra","pvalue_inter_intra")
 	
 	write.table(file = "significance.txt", x = results,quote = FALSE,sep = "\t",row.names = FALSE,col.names = TRUE)
 }
