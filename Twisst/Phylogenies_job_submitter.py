@@ -63,7 +63,7 @@ def submit_jobs(vcf_directory, phylo_method, job_dir, output_path, job_name):
     # Group files into batches of 1000
     for i in range(0, total_files, 1000):
         group_number = (i // 1000) + 1  # Batch number
-        batch_files = vcf_files[i:i + 1000]  # Get the next 100 files (or less for the last batch)
+        batch_files = vcf_files[i:i + 1000]  # Get the next 1000 files (or less for the last batch)
 
         # Create SLURM job script for this batch
         job_script_path = create_slurm_script(group_number, batch_files, phylo_method, job_dir, output_path, job_name)
