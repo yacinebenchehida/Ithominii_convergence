@@ -11,9 +11,9 @@ def create_slurm_script(group_number, vcf_files, phylo_method, job_dir, output_p
     with open(job_script_path, 'w') as job_file:
         job_file.write("#!/bin/bash\n")
         job_file.write(f"#SBATCH --job-name={job_name}_{group_number}\n")  # Use the provided job name
-        job_file.write("#SBATCH --time=02:00:00\n")
+        job_file.write("#SBATCH --time=04:00:00\n")
         job_file.write("#SBATCH --ntasks=1\n") 
-        job_file.write("#SBATCH --cpus-per-task=8\n")
+        job_file.write("#SBATCH --cpus-per-task=1\n")
         job_file.write("#SBATCH --mem=3G\n") 
         job_file.write("#SBATCH --account=BIOL-SPECGEN-2018\n")
         
@@ -60,10 +60,10 @@ def submit_jobs(vcf_directory, phylo_method, job_dir, output_path, job_name):
     vcf_files = sorted(glob.glob(os.path.join(vcf_directory, '*.vcf')))
     total_files = len(vcf_files)
     
-    # Group files into batches of 500
-    for i in range(0, total_files, 500):
-        group_number = (i // 500) + 1  # Batch number
-        batch_files = vcf_files[i:i + 500]  # Get the next 100 files (or less for the last batch)
+    # Group files into batches of 1000
+    for i in range(0, total_files, 1000):
+        group_number = (i // 1000) + 1  # Batch number
+        batch_files = vcf_files[i:i + 1000]  # Get the next 100 files (or less for the last batch)
 
         # Create SLURM job script for this batch
         job_script_path = create_slurm_script(group_number, batch_files, phylo_method, job_dir, output_path, job_name)
