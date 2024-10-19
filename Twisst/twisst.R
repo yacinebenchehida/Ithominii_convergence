@@ -162,8 +162,8 @@ permute_blocks <- function(data, region_start, region_end,block_size) {
   region_data <- permuted_data %>%
     filter(start >= region_start & end <= region_end)
   
-  # Calculate the frequency of windows with introgression_topo ≥ 0.9
-  freq_high_weight <- sum(region_data$introgression_topo >= 0.9)
+  # Calculate the frequency of windows with introgression_topo ≥ 0.95
+  freq_high_weight <- sum(region_data$introgression_topo >= 0.95)
   
   return(freq_high_weight)
 }
@@ -176,13 +176,17 @@ block_evaluation <- function(n_permutations,block_size,region_start,region_end,d
   
   observed_freq <- df %>%
     filter(start >= region_start & end <= region_end) %>%
-    summarise(freq_high_weight = sum(introgression_topo >= 0.9)) %>%
+    summarise(freq_high_weight = sum(introgression_topo >= 0.95)) %>%
     pull(freq_high_weight)
   
+  if(observed_freq==0){
+     zscore <- "No intro Topo > 95% in peak" 
+     p_value <-	"No intro Topo > 95% in peak" 
+  }else{
   zscore <- (observed_freq - mu)/std
   p_value <- mean(results >= observed_freq)
-  
-  return(list(zscore=zscore,pvalue=p_value))
+  }
+   return(list(zscore=zscore,pvalue=p_value))
 }
 
 
@@ -209,8 +213,8 @@ permute_blocks_within_shuffling <- function(data, region_start, region_end,block
   region_data <- permuted_data %>%
     filter(start >= region_start & end <= region_end)
   
-  # Calculate the frequency of windows with introgression_topo ≥ 0.9
-  freq_high_weight <- sum(region_data$introgression_topo >= 0.9)
+  # Calculate the frequency of windows with introgression_topo ≥ 0.95
+  freq_high_weight <- sum(region_data$introgression_topo >= 0.95)
   
   return(freq_high_weight)
 }
@@ -223,13 +227,17 @@ block_intra_shuffling_evaluation_ <- function(n_permutations,block_size,region_s
   
   observed_freq <- df %>%
     filter(start >= region_start & end <= region_end) %>%
-    summarise(freq_high_weight = sum(introgression_topo >= 0.9)) %>%
+    summarise(freq_high_weight = sum(introgression_topo >= 0.95)) %>%
     pull(freq_high_weight)
   
+  if(observed_freq==0){
+     zscore <- "No intro Topo > 95% in peak"
+     p_value <- "No intro Topo > 95% in peak" 
+  }else{
   zscore <- (observed_freq - mu)/std
   p_value <- mean(results >= observed_freq)
-  
-  return(list(zscore=zscore,pvalue=p_value))
+  }
+   return(list(zscore=zscore,pvalue=p_value))
 }
 
 
