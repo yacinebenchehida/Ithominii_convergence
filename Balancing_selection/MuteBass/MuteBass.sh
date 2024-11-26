@@ -204,4 +204,8 @@ echo NCD MID DONE
 #  Plot results 
 Rscript ./Plotting_results.r $OUTPUT/final_results.txt $OUTPUT/final_results_fixSizeCT.txt 
 mv *pdf $OUTPUT
+
+# Remove intermediate files
+cd $OUTPUT
+rm *frq *geno ancestral.alleles *log *gz *tbi
 # USAGE EXAMPLE: ./test_mutebass.sh -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_menophilus/multisp_Melinaea_menophilus_genotypeGVCF.intervals_55.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_18 -s 13000000 -e 13800000 -p $POP -t "(1,((2,(3,4)),5))" -o /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/MuteBass/Results/testons_la_vie_en_rose
