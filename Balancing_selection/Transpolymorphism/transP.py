@@ -125,10 +125,11 @@ def count_sites_in_windows(output_file, total_sites, all_polymorphic_sites, wind
 
     return mid_points, window_counts, available_site_ratios, polymorphic_site_ratios
 
-def plot_results(mid_points, transpolymorphic_counts, available_ratios, polymorphic_ratios, working_dir):
+def plot_results(mid_points, transpolymorphic_counts, available_ratios, polymorphic_ratios, working_dir, highlight_start, highlight_end):
     # Plot Transpolymorphic Sites
     plt.figure(figsize=(10, 6))
     plt.plot(mid_points, transpolymorphic_counts, label="Transpolymorphic Sites", color="blue", marker="o")
+    plt.axvspan(highlight_start, highlight_end, color='red', alpha=0.7, label="Genomic Interval of Interest")
     plt.xlabel("Window Mid Position (bp)")
     plt.ylabel("Number of Transpolymorphic Sites")
     plt.title("Transpolymorphic Sites by Window")
@@ -140,6 +141,7 @@ def plot_results(mid_points, transpolymorphic_counts, available_ratios, polymorp
     # Plot Ratio to Available Sites
     plt.figure(figsize=(10, 6))
     plt.plot(mid_points, available_ratios, label="Ratio to Available Sites", color="orange", marker="x")
+    plt.axvspan(highlight_start, highlight_end, color='red', alpha=0.7, label="Genomic Interval of Interest")
     plt.xlabel("Window Mid Position (bp)")
     plt.ylabel("Ratio to Available Sites")
     plt.title("Ratio of Transpolymorphic Sites to Available Sites by Window")
@@ -151,6 +153,7 @@ def plot_results(mid_points, transpolymorphic_counts, available_ratios, polymorp
     # Plot Ratio to Polymorphic Sites
     plt.figure(figsize=(10, 6))
     plt.plot(mid_points, polymorphic_ratios, label="Ratio to Polymorphic Sites", color="green", marker="s")
+    plt.axvspan(highlight_start, highlight_end, color='red', alpha=0.7, label="Genomic Interval of Interest")
     plt.xlabel("Window Mid Position (bp)")
     plt.ylabel("Ratio to Polymorphic Sites")
     plt.title("Ratio of Transpolymorphic Sites to Polymorphic Sites by Window")
@@ -167,6 +170,8 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_file", required=True, help="Path to the output file for transpolymorphic sites.")
     parser.add_argument("-w", "--window_size", type=int, required=True, help="Window size in base pairs for counting transpolymorphic sites.")
     parser.add_argument("-d", "--working_dir", required=True, help="Directory to save intermediate VCF files.")
+    parser.add_argument("--highlight_start", type=int, required=True, help="Start of the genomic interval to highlight.")
+    parser.add_argument("--highlight_end", type=int, required=True, help="End of the genomic interval to highlight.")
 
     args = parser.parse_args()
 
@@ -175,4 +180,4 @@ if __name__ == "__main__":
         os.path.join(args.working_dir, os.path.basename(args.output_file)), total_sites, all_polymorphic_sites, args.window_size
     )
 
-    plot_results(mid_points, window_counts, available_ratios, polymorphic_ratios, args.working_dir)
+    plot_results(mid_points, window_counts, available_ratios, polymorphic_ratios, args.working_dir, args.highlight_start, args.highlight_end)
