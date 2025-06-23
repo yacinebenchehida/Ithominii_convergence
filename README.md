@@ -39,4 +39,4 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 - **Transcription_Factor/** — Scripts and related information investigating transcription factor binding motifs around GWAS peaks.
  
 # Contact
-For questions or feedback, please contact Yacine Ben Chehida at y.benchehida@sheffield.ac.uk or open an issue in this repository.
+For questions or feedback, please contact y.benchehida@sheffield.ac.uk or open an issue in this repository.
