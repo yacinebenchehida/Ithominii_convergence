@@ -1,7 +1,4 @@
-This repository contains the code and analysis scripts associated with the manuscript:
-
-**"Genetic parallelism underpins convergent mimicry coloration across Lepidoptera"**  
-(*Ben Chehida et al., submitted*)
+This repository contains the code and analysis scripts associated with the manuscript: "Genetic parallelism underpins convergent mimicry coloration across Lepidoptera"**  
 
 ## Overview
 
