@@ -16,27 +16,27 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 # Contents
 
-- **Reference_Genomes_assembly/** — Scripts used for genome assembly generation and curation. 
+- **Reference_Genomes_assembly/** — Scripts used for genome assembly, generation, and curation.
 
-- **BUSCO_TreePL/** — Scripts used to get the BUSCO phylogeny and molecular dating analyses (TreePL).
+- **BUSCO_TreePL/** — Scripts and related information for BUSCO phylogeny and molecular dating analyses, as presented in Figure 1.
 
 - **Patternize/** — Scripts for quantifying and analyzing wing colour pattern variation across species.
 
-- **Pop_Structure/** —Scripts for quantifying population genetic structure (PCA).
+- **Pop_Structure/** — Scripts for quantifying population genetic structure using PCA.
 
 - **QTL/** — Scripts related to quantitative trait loci mapping to identify genomic regions associated with colour patterns in *H. pardalinus*.
 
-- **GWAS/** — Genome-wide association study datasets and analysis scripts investigating genetic variants linked to mimicry traits.
+- **GWAS/** — Scripts used to perform genome-wide association analyses presented in the paper.
 
-- **GWAS_Peak_Alignments/** — Alignments and comparative data for candidate regions identified in GWAS peak analyses.
+- **GWAS_Peak_Alignments/** — Sliding window alignments and candidate regions identified in GWAS peak analyses between species, as shown in Figure 4.
 
-- **RNAseq/** — Raw and processed transcriptomic data and scripts for gene expression analyses.
+- **RNAseq/** — Scripts and related information for: (1) generation of de novo transcriptomes, (2) annotation of *ivory*, and (3) differential expression analyses in *Mechanitis messenoides* and *Melinaea menophilus*.
 
-- **Introgression/** — Data and code to detect and analyze introgression events between species.
+- **Introgression/** — Scripts and related information for performing three types of introgression tests used in this study: (1) fd/fdm analyses, (2) Relate, and (3) sliding window NJ trees.
 
-- **Balancing_Selection/** — Datasets and analyses focused on identifying signatures of balancing selection in mimicry-related genes.
+- **Balancing_Selection/** — Scripts and related information for performing three types of balancing selection tests used in this study: (1) sliding window pi (across multiple species), (2) transpolymorphism analysis, and (3) MuteBass.
 
-- **Transcription_Factor/** — Data and scripts investigating transcription factor binding and regulatory elements involved in colour pattern regulation.
-- 
+- **Transcription_Factor/** — Scripts and related information investigating transcription factor binding motifs around GWAS peaks.
+ 
 # Contact
 For questions or feedback, please contact Yacine Ben Chehida at y.benchehida@sheffield.ac.uk or open an issue in this repository.
