@@ -16,27 +16,27 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 # Contents
 
-Reference_Genomes_assembly/ — Scripts and code used for analysis and figure generation
+- **Reference_Genomes_assembly/** — Scripts used for genome assembly generation and curation. 
 
-BUSCO_TreePL/ — Raw and processed datasets used in the study
+- **BUSCO_TreePL/** — Scripts used to get the BUSCO phylogeny and molecular dating analyses (TreePL).
 
-Patternize/ - malsjdkfmalskjdf
+- **Patternize/** — Scripts for quantifying and analyzing wing colour pattern variation across species.
 
-Pop_Structure/ — The manuscript and supplementary PDF files
+- **Pop_Structure/** —Scripts for quantifying population genetic structure (PCA).
 
-QTL/ — The manuscript and supplementary PDF files
+- **QTL/** — Scripts related to quantitative trait loci mapping to identify genomic regions associated with colour patterns in *H. pardalinus*.
 
-GWAS/ — The manuscript and supplementary PDF files
+- **GWAS/** — Genome-wide association study datasets and analysis scripts investigating genetic variants linked to mimicry traits.
 
-GWAS_Peak_Alignments/ — The manuscript and supplementary PDF files
+- **GWAS_Peak_Alignments/** — Alignments and comparative data for candidate regions identified in GWAS peak analyses.
 
-RNAseq/ - dmafjsmkdlfas
+- **RNAseq/** — Raw and processed transcriptomic data and scripts for gene expression analyses.
 
-Introgression/ - mdsjafklsdlf
+- **Introgression/** — Data and code to detect and analyze introgression events between species.
 
-Balancing_Selection/ - mfjadksmfjasldf
+- **Balancing_Selection/** — Datasets and analyses focused on identifying signatures of balancing selection in mimicry-related genes.
 
-Transcription_Factor/ - mdjfamksdjfaklsdfjmlasdf
-
+- **Transcription_Factor/** — Data and scripts investigating transcription factor binding and regulatory elements involved in colour pattern regulation.
+- 
 # Contact
 For questions or feedback, please contact Yacine Ben Chehida at y.benchehida@sheffield.ac.uk or open an issue in this repository.
