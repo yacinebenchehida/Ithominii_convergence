@@ -1,3 +1,5 @@
+<img src="images/Tiger_wings.png" width="90%" height="90%"/>
+
 # Genetic parallelism underpins convergent mimicry coloration across Lepidoptera
 
 Welcome to the  GitHub repository for the scientific publication "***Genetic parallelism underpins convergent mimicry coloration across Lepidoptera***" by **Ben Chehida Y., van der Heijden S. M. E., Page J. E., et al. 2025**.
@@ -44,6 +46,3 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
  
 # Contact
 For questions or feedback, please contact y.benchehida@sheffield.ac.uk.
-
-
-<img src="Word_cloud/wordcloud.png" width="90%" height="90%"/>
