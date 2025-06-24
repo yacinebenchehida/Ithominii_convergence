@@ -37,6 +37,8 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 - **Balancing_Selection/** — Scripts and related information for performing three types of balancing selection tests used in this study: (1) sliding window pi (across multiple species), (2) transpolymorphism analysis, and (3) MuteBass.
 
 - **Transcription_Factor/** — Scripts and related information investigating transcription factor binding motifs around GWAS peaks.
+
+- **Others/** — Additional scripts.
  
 # Contact
 For questions or feedback, please contact y.benchehida@sheffield.ac.uk.
