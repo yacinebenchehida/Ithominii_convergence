@@ -34,6 +34,8 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 - **Introgression/** — Scripts and related information for performing three types of introgression tests used in this study: (1) fd/fdm analyses, (2) Relate, and (3) sliding window NJ trees.
 
+- **Genotype_maps/** - Pipeline and explanations to generate the genotype maps as showed in the Extended Data. 
+
 - **Balancing_Selection/** — Scripts and related information for performing three types of balancing selection tests used in this study: (1) sliding window pi (across multiple species), (2) transpolymorphism analysis, and (3) MuteBass.
 
 - **Transcription_Factor/** — Scripts and related information investigating transcription factor binding motifs around GWAS peaks.
