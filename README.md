@@ -7,9 +7,9 @@ Welcome to the  GitHub repository for the scientific publication "***Genetic par
 # Overview
 This repository contains all the materials related to our research published in **TBA**. Here, you will find:
 
-- Source custom scripts and pipeine used for data analysis
+- Source custom scripts and pipelines used for data analysis
 
-- Instructions to reproduce our results
+- Instructions to reproduce the results
 
 - Additional explanations and documentation
 
