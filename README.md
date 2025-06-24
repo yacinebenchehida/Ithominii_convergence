@@ -1,4 +1,4 @@
-<img src="Ithominii_convergence/images/tiger_wings.png" width="90%" height="90%"/>
+<img src="images/tiger_wings.png" width="90%" height="90%"/>
 
 # Genetic parallelism underpins convergent mimicry coloration across Lepidoptera
 
