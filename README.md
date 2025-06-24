@@ -1,4 +1,6 @@
-<img src="Tiger wings.png" align="center" width="50%" height="50%"/>
+<p align="center">
+  <img width="50%" height="50%" src="Tiger wings.png">
+</p>
 
 # Genetic parallelism underpins convergent mimicry coloration across Lepidoptera
 
