@@ -44,3 +44,6 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
  
 # Contact
 For questions or feedback, please contact y.benchehida@sheffield.ac.uk.
+
+
+<img src="Word_cloud/wordcloud.png" width="90%" height="90%"/>
