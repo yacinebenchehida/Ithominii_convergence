@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --time=12:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=15G 
+#SBATCH --account=BIOL-SPECGEN-2018 
+#SBATCH --job-name=Relate
 
 ###################################
 # Set usage and script parameters #
@@ -6,27 +13,30 @@
 usage()
 {
 cat << EOF
-./Relate_laucher -v <vcf> -c <chromosome> -s <star_position> -e <end_position> --snps <list_snps> -f <pop_file> -t <list_taxa> -r <root_outgroup> --species <species_list> -o <path_output> -n <name> -h
+./Relate_laucher -v <vcf> -c <chromosome> -s <star_position> -e <end_position> --snps <list_snps> -f <pop_file> -t <list_taxa> -r <root_outgroup> --species <species_list> -o <path_output> -n <name> --introg <two_species_names> --ps <peak_start> --pe <peak_end> -h
 
 OPTIONS:
-  -v            Name of the vcf input
+  -v            Input VCF file name
   -c		Contig/Scaffold/Chromosome name
   -s		Starting position in the VCF
   -e		End position in the VCF
   --snps	List of SNPs for which a newick tree will be plotted (comma separated)
   -f            Population file
-  -t		List of taxa to analyses separated by a comma
-  -r		taxa used to define the ancestral state - if omitted it will use all the samples present in the VCF (provided in -v)
-  --species		A list of species used to define the ancestral state at SNPs where the outgroups do not have data (only 3 samples we will picked from the species name - the species name must occur in the Population file provided in -f) 
+  -t		List of taxa to analyses (comma-separated)
+  -r		Taxa used to define the ancestral state (comma separated)
+  --species	A list of species used to define the ancestral state at SNPs where the outgroups do not have data (only 3 samples we will picked from the species name - the species name must occur in the Population file provided in -f) 
   -o		Output folder  path
-  -n            Prefix used for output files
+  -n            Prefix for output files
+  --introg	The names of two species to test for introgression (comma separated)
+  --ps		Peak start position
+  --pe		Peak end position
   -h            usage information and help (this message)
 EOF
 exit 0
 }
 
 # Parse command-line options
-options=$(getopt -o v:c:s:e:f:t:r:o:n:h --long snps:,species: -- "$@")
+options=$(getopt -o v:c:s:e:f:t:r:o:n:h --long snps:,species:,introg:,ps:,pe: -- "$@")
 
 # Check for getopt errors
 if [ $? -ne 0 ]; then
@@ -84,6 +94,18 @@ do
 		  PREFIX=$2
 		  shift 2
 		  ;;
+                --introg)
+                  INTROG_SP=$2
+                  shift 2
+                  ;;
+		--ps)
+		  PEAK_START=$2
+		  shift 2
+		  ;;
+		--pe)
+                  PEAK_END=$2
+                  shift 2
+                  ;;
 		-h)
 		  usage
 		  ;;
@@ -135,10 +157,19 @@ echo -e OUTGROUP:"${OUTGROUP}"
 echo -e SPECIES:"${SP}"
 echo -e Output path:"${OUTPUT_PATH}"
 echo -e Prefix:"${PREFIX}"
-
+if [ -n "${INTROG_SP}" ]; then
+	echo -e Introgressied species: "${INTROG_SP}"
+fi
+if [[ -z "${PEAK_START}" || -z "${PEAK_END}" ]]; then
+	echo -e Peak start: Not provided
+	echo -e Peak end:Not provided
+else
+	echo -e Peak start:"${PEAK_START}"
+	echo -e Peak end:"${PEAK_END}"
+fi
 
 ###################################
-# 2' - SOFTWARE LOADING AND PATHS #
+# 2' - SOFTWARE LAODING AND PATHS #
 ###################################
 module load  BCFtools/1.19-GCC-13.2.0
 module load R/4.2.1-foss-2022a
@@ -183,7 +214,7 @@ fi
 # 4 - Get VCF for specific region/individuals #
 ###############################################
 # Ingroup
-bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF | bcftools view -U -i 'TYPE=="snp"' -m2 -M2 -v snps -O v  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
+bcftools view --regions $CHR:$START-$END -S <(cat $OUTPUT_PATH/$PREFIX/"$PREFIX"_phenotype_file.txt|awk '{print $1}') $VCF | bcftools view -U -i 'TYPE=="snp"' -m2 -M2 -v snps -O v|bcftools view -i 'F_MISSING < 0.2'  > $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 bgzip $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf
 tabix $OUTPUT_PATH/$PREFIX/"$PREFIX".vcf.gz
 echo "SUBSETTED VCF FILE READY"
@@ -415,15 +446,28 @@ echo G_OPTION CREATED
 python $TWISST -t "$PREFIX"_"$CHR"_"$min_value"-"$max_value".newick  --method complete --groupsFile group.txt $G_OPTION --outputTopos Phylogeny.topos | gzip > Phylogeny.weights.tsv.gz
 
 # 4) Plot twisst results
-Rscript $SCRIPTS/twisst.R "$min_value" "$max_value" 0.008
+if [ -n "${INTROG_SP}" ]; then
+    INTROGRESSED_TAXA1=$(echo ${INTROG_SP}|perl -pe 's/,/\t/g'|awk '{print $1}'|cut -d _ -f 2)
+    echo $INTROGRESSED_TAXA1
+    INTROGRESSED_TAXA2=$(echo ${INTROG_SP}|perl -pe 's/,/\t/g'|awk '{print $2}'|cut -d _ -f 2)
+    echo $INTROGRESSED_TAXA2
+    #Rscript $SCRIPTS/twisst_zscore.R "$min_value" "$max_value" 0.020 $INTROGRESSED_TAXA1 $INTROGRESSED_TAXA2 $SNPS $PEAK_START $PEAK_END
+    Rscript $SCRIPTS/twisst_permutations.R $START $END 0.5 $INTROGRESSED_TAXA1 $INTROGRESSED_TAXA2 $PEAK_START $PEAK_END
+else
+
+    Rscript $SCRIPTS/twisst.R "$min_value" "$max_value" 0.020
+fi
+echo TWISST RESULTS PLOTTED
+
 
 #####################################
 # 12 - Clean all intermediate files #
 #####################################
 rm *vcf.gz* chrom_names.txt *map *_alternative_ancestral_state.frq *_alternative_ancestral_state.txt 
 mkdir Other_files
-mv $(ls|grep -v -E "pdf|newick|pos|Other_files") Other_files
+mv $(ls|grep -v -E "significance|pdf|newick|pos|Other_files|zscore_pvalues_top") Other_files
 echo RELATE FINISHED RUNNING
 
 
 # Usage example:./Relate_launcher_V4 -v /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -c SUPER_2 -s 25956241 -e 26031063 -f ../Inputs/Input_2_use.txt -t mothone,isocomma,satevis,marsaeus_rileyi,marsaeus_phasiana,marsaeus_macaria,lilis --snps 25973722,25973735,25973747,25976514,25976548,25976654,25993654,25993663,25993709,25996282 -r outgroup --species menophilus,satevis,mothone,flavo -o . -n test
+
