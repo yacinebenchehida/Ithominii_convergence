@@ -2,8 +2,8 @@ library(admixtools)
 library(tidyverse)
 
 args <- commandArgs(trailingOnly = TRUE)
-data = "../Inputs/Inputs"
 subspecies_files <- args[1]
+data = args[2]
 pops <- read.table(subspecies_files)
 pop1 <- pops[1,1]
 pop2 <- pops[2,1]
