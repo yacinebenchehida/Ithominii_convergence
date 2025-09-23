@@ -123,5 +123,5 @@ echo Plink done
 # Compute f4 statistics #
 #########################
 echo Start f4 statistics using admixtools
-Rscript ./f4.R $RESULTS/"$PREFIX"_subspecies.txt $RESULTS/Inputs $RESULTS
+Rscript ./f4.R $RESULTS/"$PREFIX"_subspecies.txt $RESULTS
 echo DONE
