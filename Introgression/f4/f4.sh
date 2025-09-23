@@ -15,37 +15,29 @@ module load  R/4.2.1-foss-2022a
 module load PLINK/1.90-beta-7.4-x86_64
 
 ################
-# Script usage #
+# Usage message
 ################
-usage()
-{
-cat << EOF
-Usage: ./f4.sh -v <vcf> -o <outdir> -p <pop_file> --p1 <pop1> --p2 <pop2> --p3 <pop3> --p4 <pop4> -h
-
-OPTIONS:
-  -v, --vcf        Input VCF file name (full dataset to be subsetted). The VCF should be bgzipped and tabixed.
-  -o, --outdir     Output directory where results will be saved
-  -p, --pop        Tab separate population file containing population (col1) and sample ID (exactly as in the VCF)
-  --p1             Name of the first population (used as P1 in the f4 test)
-  --p2             Name of the second population (used as P2 in the f4 test)
-  --p3             Name of the third population (used as P3 in the f4 test)
-  --p4             Name of the fourth population (used as P4 in the f4 test)
-  -h               Show this usage information and exit
-EOF
-exit 0
+usage() {
+    echo "Usage: $0 -v <vcf> -o <outdir> -p <pop_file> --p1 <pop1> --p2 <pop2> --p3 <pop3> --p4 <pop4>"
+    echo ""
+    echo "OPTIONS:"
+    echo "  -v, --vcf      Input VCF file (bgzipped and indexed)."
+    echo "  -o, --outdir   Output directory."
+    echo "  -p, --pop      Population file (2 columns: popID sampleID)."
+    echo "  --p1           Population name for P1."
+    echo "  --p2           Population name for P2."
+    echo "  --p3           Population name for P3."
+    echo "  --p4           Population name for P4."
+    echo "  -h             Show this help message and exit."
+    exit 1
 }
 
-##########################
-# Parse input parameters #
-##########################
-OPTIONS=$(getopt -o v:o:p:h \
-    --long vcf:,outdir:,pop:,p1:,p2:,p3:,p4: \
-    -n "$0" -- "$@")
-
-if [ $? -ne 0 ]; then
+##################################
+# Parse command-line arguments
+##################################
+if ! OPTIONS=$(getopt -o v:o:p:h --long vcf:,outdir:,pop:,p1:,p2:,p3:,p4: -n "$0" -- "$@"); then
     usage
 fi
-
 eval set -- "$OPTIONS"
 
 while true; do
@@ -57,14 +49,17 @@ while true; do
         --p2) P2="$2"; shift 2 ;;
         --p3) P3="$2"; shift 2 ;;
         --p4) P4="$2"; shift 2 ;;
-        -h) usage; shift ;;
+        -h) usage ;;
         --) shift; break ;;
-        *) break ;;
+        *) echo "Unknown option: $1"; usage ;;
     esac
 done
 
+##################################
 # Check mandatory parameters
+##################################
 if [[ -z $VCF || -z $OUTDIR || -z $POP_FILE || -z $P1 || -z $P2 || -z $P3 || -z $P4 ]]; then
+    echo "ERROR: Missing required arguments!"
     usage
 fi
 
@@ -107,6 +102,7 @@ bcftools view -S <(awk '{print $2}' "$RESULTS/${PREFIX}_phenotype_file.txt") \
   --threads 8 "$VCF"
   
 tabix "$RESULTS/${PREFIX}.vcf.gz"
+VCF="$RESULTS/${PREFIX}.vcf.gz"
 echo Subsetted VCF generated
 
 ###############################################
@@ -117,6 +113,7 @@ plink --vcf "$VCF" --double-id --allow-extra-chr --allow-no-sex --set-missing-va
 echo Change contig names to numbers
 awk '{if(!($1 in seen)) seen[$1]=++counter; $1=seen[$1]; print}' OFS='\t' $RESULTS/subspecies.bim > $RESULTS/Inputs.bim
 mv $RESULTS/subspecies.bed $RESULTS/Inputs.bed
+paste <(cat $RESULTS/"$PREFIX"_phenotype_file.txt|awk '{print $1}') <(awk '{$1=""; sub(/^ /,""); print}' $RESULTS/subspecies.fam) > $RESULTS/Inputs.fam
 echo Plink done
 
 ##########################
