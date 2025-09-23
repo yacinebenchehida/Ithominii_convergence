@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Define variables
-$VCF="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/multisp/Melinaea_menophilus/snps_NO_setGT_GQ10.vcf.gz" # Must be bgzipped and indexed  
-$OUTPUT="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/admixtools/f4/Results"
-$POP_FILE="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/admixtools/f4/Inputs/species_samples.txt" # Tab separate two columns text file (column 1: population; column 2: Sample_ID)
+VCF="/mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/multisp/Melinaea_menophilus/snps_NO_setGT_GQ10.vcf.gz" # Must be bgzipped and indexed  
+OUTPUT="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/admixtools/f4/Results"
+POP_FILE="/mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/admixtools/f4/Inputs/species_samples.txt" # Tab separate two columns text file (column 1: population; column 2: Sample_ID)
 
 # # Arrays defining groups of four populations (P1, P2, P3, P4), where each index across the arrays specifies one f4 test comparison
 P1_list=(pop11 pop12 pop13 pop14 pop15)
