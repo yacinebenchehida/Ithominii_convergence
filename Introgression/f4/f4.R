@@ -16,4 +16,6 @@ pop4 <- pops[4,1]
 outfile = paste(results,"/",pop1,"_",pop2,"_",pop3,"_",pop4,".txt", sep="")
 print(outfile)
 
-out = f4("isocomma_colombia_isocomma_ecuador_menophilus_zaneka_menophilus_colombia/Inputs", pop1, pop2, pop3, pop4)
+out = f4(data_plink, pop1, pop2, pop3, pop4)
+
+write_tsv(out, outfile)
