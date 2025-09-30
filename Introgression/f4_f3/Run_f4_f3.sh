@@ -21,7 +21,7 @@ for i in ${!P1_list[@]}; do
     P3=${P3_list[$i]}
     P4=${P4_list[$i]}
     
-    ./f4_f3.sh -v $VCF -o $OUTPUT -p $POP_FILE --p1 ${P1} --p2 ${P2} --p3 ${P3} --stat f4 
+    sbatch ./f4_f3.sh -v $VCF -o $OUTPUT -p $POP_FILE --p1 ${P1} --p2 ${P2} --p3 ${P3} --stat f4 
 done
 
 # ----------------
@@ -40,5 +40,5 @@ for i in ${!P1_list[@]}; do
     P2=${P2_list[$i]}
     P3=${P3_list[$i]}
     
-    ./f4_f3.sh -v $VCF -o $OUTPUT -p $POP_FILE --p1 ${P1} --p2 ${P2} --p3 ${P3} --stat f3 
+    sbatch ./f4_f3.sh -v $VCF -o $OUTPUT -p $POP_FILE --p1 ${P1} --p2 ${P2} --p3 ${P3} --stat f3 
 done
