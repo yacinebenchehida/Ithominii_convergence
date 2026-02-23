@@ -49,8 +49,3 @@ Rscript ./Plot.R $RESULTS/*.assoc.gemma.assoc.txt $RESULTS/scaffold_order.txt $T
 ```
 
 
-## 4) Predict genes in the GWAS peaks
-``` bash
-
-``` 
-
