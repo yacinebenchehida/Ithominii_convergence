@@ -3,8 +3,8 @@
 ##########################
 # Load necessary modules #
 ##########################
-module load R
-module load BCFtools
+module load R/4.2.1-foss-2022a        # Load R module for statistical computing and graphics
+module load BCFtools/1.19-GCC-13.2.0  # Load BCFtools module for working with VCF files
 
 ########################
 # Get script arguments #
@@ -35,7 +35,7 @@ echo "Phenotype multi file: $PHENOTYPE_MULTI contains $NUMB_SAMPLES_MULTI sample
 # Get SNPs in the GWAS peak for focal species #
 ###############################################
 awk -v scaffold="$SCAFFOLD" -v start="$PEAK_START" -v end="$PEAK_END" \
-        '$1 == scaffold && $3 >= start && $3 <= end {print $3"\t"$4}' $GWAS > "${SPECIES}_peak_pvalues.txt"
+        '$1 == scaffold && $3 >= start && $3 <= end {print $3"\t"$4}' $GWAS |grep -v "nan" > "${SPECIES}_peak_pvalues.txt"
 SNP=$(cat "${SPECIES}_peak_pvalues.txt" | wc -l)
 echo "There are $SNP SNPs in the GWAS peak"
 echo "PVALUES IN PEAK EXTRACTED"  # Indicate that p-values extraction is completed
@@ -119,13 +119,13 @@ tabix "${SPECIES}_multi_peak.vcf.gz"
 # Get genotype for the peak regions from the multiSP #
 ######################################################
 bcftools query -f '%POS  [ %GT]\n'] "${SPECIES}_multi_peak.vcf.gz" > "${SPECIES}_multi_genotypes.txt"
-rm ${SPECIES}_multi_peak.vcf.*
+#rm ${SPECIES}_multi_peak.vcf.*
 
 #########################################################################
 # Extract SNPs present in the focal species GWAS from the genotype file #
 #########################################################################
 grep -f <(awk '{print $1}' "${SPECIES}_peak_pvalues.txt") "${SPECIES}_multi_genotypes.txt" > "${SPECIES}_GWAS_SNPS_multisp_genotype.txt"
-rm "${SPECIES}_multi_genotypes.txt"
+#rm "${SPECIES}_multi_genotypes.txt"
 
 ############################################################################################
 # Reorder samples in multispecies phenotype file in the same order as the multispecies VCF #
@@ -151,5 +151,5 @@ cat "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" | while read line; do
     ((counter++))
 done
 
-rm "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" "${SPECIES}_peak_pvalues.txt" reordered_"$tmp_name" "${SPECIES}_focal_genotypes_tmp.txt"
+#rm "${SPECIES}_GWAS_SNPS_multisp_genotype.txt" "${SPECIES}_peak_pvalues.txt" reordered_"$tmp_name" "${SPECIES}_focal_genotypes_tmp.txt"
 echo "MULTI SPECIES R INPUT READY"
