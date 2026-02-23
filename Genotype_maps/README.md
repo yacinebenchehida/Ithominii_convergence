@@ -1,6 +1,6 @@
 # Genotype maps
 
-This folder contains all the scripts used to perform the GWAS analyses (GEMMA.sh). The GWAS were performed with the GEMMA software. 
+This folder contains all the scripts used to generate the genotype maps (Extended Data Fig. 3-9,11-13,15)
 
 ## 0) Prepare the data for the analysis
 
