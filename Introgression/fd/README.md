@@ -3,7 +3,7 @@
 
 ## Overview
 
-This pipeline computes **D-statistic, fd, and fdM** in sliding windows using the `genomics_general` toolkit (ABBABABAwindows.py).  
+This pipeline computes **D-statistic, fd, and fdM** in sliding windows using the [genomics_general](https://github.com/simonhmartin/genomics_general) toolkit (ABBABABAwindows.py).  
 It performs:
 
 1. VCF subsetting to selected taxa
@@ -27,7 +27,7 @@ The following software must be available:
   - `parseVCF.py`
   - `ABBABABAwindows.py`
 
-The script assumes the path to `genomics_general` is correctly defined inside the `fd` script.
+The script assumes the path to [genomics_general](https://github.com/simonhmartin/genomics_general) is correctly defined inside the `fd` script.
 
 ---
 
@@ -85,25 +85,10 @@ Creates a phenotype file containing samples for:
 
 P1, P2, P3, and Outgroup.
 
-### 2. VCF Subsetting
-
-Extracts the genomic region:
-
-```
-CHR:START-END
-```
-
-Filters:
-- Bi-allelic SNPs only (`-m2 -M2 -v snps`)
-
-Produces:
-```
-<PREFIX>.vcf.gz
-```
 
 ---
 
-### 3. Convert VCF to GENO
+### 2. Convert VCF to GENO
 
 Using:
 
@@ -119,7 +104,7 @@ Generates:
 
 ---
 
-### 4. Sliding Window ABBA–BABA
+### 3. Sliding Window ABBA–BABA
 
 Using:
 
