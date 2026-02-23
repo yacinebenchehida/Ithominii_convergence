@@ -90,13 +90,6 @@ The launcher writes a phenotype file containing 2 columns:
 - Column 1: sample ID
 - Column 2: group (used by TWISST via `--groupsFile`)
 
-`launch_twisst` builds this file using:
-
-- `grep -P "\\s<i>\\s*(\\w)*\\s*$"` for each taxon label `i` in `-t`
-- then `awk '{print $1"\\t"$2}'`
-
-This means the population file must contain the taxon label as a **whole field** near the end of each matching line, and the first two columns must be sample ID and group.
-
 ---
 
 ## 2) Parameters
