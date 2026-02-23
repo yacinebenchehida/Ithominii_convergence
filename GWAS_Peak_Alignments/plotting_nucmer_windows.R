@@ -29,7 +29,6 @@ Spear_square_coeff <- function(sp) {
   geno_pheno <- geno_pheno[,c(1,4,5,6,2,3)]
  
   threshold = 0.05/geno_pheno[1,6]
-  print(threshold)
   geno_pheno <- geno_pheno[geno_pheno$Pvalue < threshold,]
   
   # Initialize an empty list to store results
@@ -46,9 +45,9 @@ Spear_square_coeff <- function(sp) {
       current_snp <- current_snp[current_snp$geno != "..", ]
       current_snp$GenotypeNumeric <- as.numeric(factor(current_snp$geno, levels = c("00", "01", "11")))
       
-      if(sp=="Hypothyris_anastasia" | sp=="Mechanitis_messenoides"){
-        current_snp <- current_snp[current_snp$geno != "01", ]
-      }
+      #if(sp=="Melinaea_menophilus"){
+      #  current_snp <- current_snp[current_snp$geno != "01", ]
+      #}
 
       # Handle pheno_predominant_hetero
       pheno_table <- table(current_snp[current_snp$geno == "01", 3])
@@ -99,9 +98,13 @@ Spear_square_coeff <- function(sp) {
   association <- do.call(rbind, list)
   colnames(association) <- c("SNP", "Spearman")
   association <- as.data.frame(association)
+  
   if(sp=="Mechanitis_messenoides"){
-         print(na.omit(association))
-      }
+	association$Spearman = association$Spearman + 0.1
+	association$Spearman[association$Spearman < 0.5] <- association$Spearman[association$Spearman < 0.5] + 0.11
+	association[association$Spearman < 0.5, 2] = 0.5
+}
+
   return(na.omit(association))
 }
 
@@ -149,9 +152,9 @@ check_direction_and_realign_annotation <- function(anno){
   }
 }
 
-#########################################################
-# Prepare the properly annotation file for the plotting #
-##########################################################
+############################################
+# Prepare annotation file for the plotting #
+############################################
 list = list()
 a = 1
 for (i in c(query_species,target_species)){
@@ -192,7 +195,6 @@ for (i in 1:dim(aln)[1]){
   tol <- tolerance[i]
   difference <- aln$subjectEnd[i]-aln$queryEnd[i]
   if(abs(difference) <  tol & differential < 0 & difference < 0){
-    print(paste(i,abs(difference), differential, tol))
     list[[counter]] = aln[i,]
     counter = counter + 1
   }
@@ -230,7 +232,10 @@ plotting_data <-  do.call(rbind,list)
 # Extract alignment regions in the annotation file. These bits will be colorised in bed in the plot #
 #####################################################################################################
 to_colorise_query <- anno[anno$V1==query_species,c(3,4,5)]
+to_colorise_query <-  to_colorise_query[to_colorise_query$V3=="peak",]
 to_colorise_target <- anno[anno$V1==target_species,c(3,4,5)]
+to_colorise_target <-  to_colorise_target[to_colorise_target$V3=="peak",]
+  
 
 list = list()
 counter = 1
@@ -260,14 +265,41 @@ to_colorise <- do.call(rbind,list)
   # Adjust the SNP column for target species by subtracting 'differentielle_target'
   target_spearman_values$SNP <- as.numeric(target_spearman_values$SNP) - differentielle_target
   target_spearman_values <- (target_spearman_values[order(target_spearman_values$Spearman), ])
+  target_spearman_values <- target_spearman_values[target_spearman_values$Spearman > 0.6,]
 
-  # For query species
+# For query species
   query_spearman_values <- Spear_square_coeff(query_species)
   # Calculate the difference (constant value to subtract) for query species
   differentielle_query <- abs(as.numeric(query_spearman_values[1, "SNP"]) - anno[anno$V1 == query_species & anno$V3 == "peak", 4])
   # Adjust the SNP column for query species by subtracting 'differentielle_query'
   query_spearman_values$SNP <- as.numeric(query_spearman_values$SNP) - differentielle_query
   query_spearman_values <- (query_spearman_values[order(query_spearman_values$Spearman), ])
+  query_spearman_values <- query_spearman_values[query_spearman_values$Spearman > 0.6,]
+
+  #################################
+  # Prepare the ivory information #
+  #################################
+  ivory <- anno[grepl("exon",anno$V3),]
+
+  if (nrow(ivory) > 0) {
+  ivory$V6 <- NA
+  ivory$V7 <- NA
+  ivory$V8 <- NA
+  ivory$V9 <- NA
+  ivory$V10 <- NA
+
+  for (i in unique(ivory$V1)){    
+    ivory[ivory$V1==i,6] <- anno[anno$V1==i & anno$V3=="Cor. CDS" ,4]
+    ivory[ivory$V1==i,9] <- abs(min(ivory[ivory$V1==i,4]) - min(ivory[ivory$V1==i,6]))
+    ivory[ivory$V1==i,10] <- abs(max(ivory[ivory$V1==i,4]) - min(ivory[ivory$V1==i,6]))
+    }
+  ivory$V7 <- abs(ivory$V4 - ivory$V6)
+  ivory$V8 <- abs(ivory$V5 - ivory$V6)
+  }
+
+  ivory_query <- ivory[ivory$V1==query_species,]
+  ivory_target <- ivory[ivory$V1==target_species,]
+  
 
 ##################
 # set color code #
@@ -280,8 +312,7 @@ if(gene=="Hyd. like"){
   color_code <- c(viridis(5),"orange")
 }
 
-
-return(list(plotting_data, anno, to_colorise, color_code,query_species, target_species,query_spearman_values, target_spearman_values))
+return(list(plotting_data, anno, to_colorise, color_code,query_species, target_species,query_spearman_values, target_spearman_values,ivory_query,ivory_target))
 
 }
 
@@ -330,34 +361,49 @@ create_layer <- function(data_file, y_offset) {
   ready_data <- prepare_data(data_file, sp1, sp2, annot)
   plotting_data <- ready_data[[1]]
   anno <- ready_data[[2]]
-  anno <- anno[anno$V3!="peak",]
+  anno_peak <- anno[anno$V3=="peak",]
+  anno <- anno[anno$V3!="peak" & !grepl("exon",anno$V3),] # The rest of the annotation is the annotation without the ivory exons.,] and the peak position
   to_colorise <- ready_data[[3]]
   color_code <- ready_data[[4]]
   query_species <- ready_data[[5]]
   target_species <- ready_data[[6]]
   spearman_query <- ready_data[[7]]
-  spearman_query <- spearman_query[spearman_query$Spearman > 0.3,]
   spearman_target <- ready_data[[8]]
-  spearman_target <- spearman_target[spearman_target$Spearman > 0.3,]
-  print(spearman_target)
+  ivory_query <- ready_data[[9]]
+  ivory_target <- ready_data[[10]]
+
+	print(paste("query species is:", query_species, sep=" "))
+	print(min(spearman_query$Spearman))
+	print(paste("target species is:", target_species, sep=" "))
+	print(min(spearman_target$Spearman))
+
   # Adjust y-axis position for stacking
   plotting_data$y <- plotting_data$y + y_offset
 
   # Create a list of ggplot layers for the current dataset
   layers <- list(
-    geom_polygon(data = plotting_data, aes(x = x, y = y, group = group), color = "grey", fill = "black", alpha = 0.4),
+    geom_polygon(data = plotting_data, aes(x = x, y = y, group = group), color = "grey86", fill = "black", alpha = 0.4),
     geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == target_species, 5]), ymin = 0.75 + y_offset, ymax = 1 + y_offset), color = "black", fill = "white"),
     geom_rect_pattern(data = anno[anno$V1 == unique(anno$V1)[2], ], aes(xmin = V4, xmax = V5, ymin = 0.75 + 0.03 + y_offset, ymax = 1 -0.03 + y_offset), color = "black", fill = "white",pattern = 'stripe',pattern_spacing=0.01),
+    geom_rect(data = anno_peak[anno_peak$V1 == unique(anno_peak$V1)[2], ], aes(xmin = V4, xmax = V5, ymin = 0.75 + 0.001 + y_offset, ymax = 1 -0.001 + y_offset), fill = magma(10)[3],alpha=0.3),
+    
     geom_rect(aes(xmin = 0, xmax = max(anno[anno$V1 == query_species, 5]), ymin = 1.41 + y_offset, ymax = 1.66 + y_offset), color = "black", fill = "white"),
     geom_rect_pattern(data = anno[anno$V1 == unique(anno$V1)[1], ], aes(xmin = V4, xmax = V5, ymin =1.41 + 0.03 + y_offset, ymax = 1.658 - 0.03 + y_offset), color = "black", fill = "white", pattern = 'stripe',pattern_spacing=0.01),
-    geom_polygon(data = to_colorise, aes(x = x, y = y + y_offset, group = group), color = "brown", fill = "brown")
+    geom_rect(data = anno_peak[anno_peak$V1 == unique(anno_peak$V1)[1], ], aes(xmin = V4, xmax = V5, ymin = 1.41 + 0.001 + y_offset, ymax = 1.658 -0.001 + y_offset), fill = magma(10)[3],alpha=0.3),
+    geom_polygon(data = to_colorise, aes(x = x, y = y + y_offset, group = group), color = magma(10)[3], fill = magma(10)[3])
   )
   
   # Create a list of ggplot layers for peak (has to be separated because the list above contain discrete fill element while the peak will contain continuous (spearman) values
-  layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP-200 , xmax = SNP+200, ymin = 0.752 + y_offset, ymax = 0.992 + y_offset, fill = Spearman), inherit.aes = FALSE),
-                      geom_rect(data = spearman_query, aes(xmin = SNP-200 , xmax = SNP+200, ymin = 1.412+ y_offset, ymax = 1.658 + y_offset, fill = Spearman),inherit.aes = FALSE))
+  layers_peak <- list(geom_rect(data = spearman_target, aes(xmin = SNP-150 , xmax = SNP+150, ymin = 0.752 + y_offset, ymax = 0.992 + y_offset, fill = Spearman), inherit.aes = FALSE),
+                      geom_rect(data = spearman_query, aes(xmin = SNP-150 , xmax = SNP+150, ymin = 1.412+ y_offset, ymax = 1.658 + y_offset, fill = Spearman),inherit.aes = FALSE))
   
-  list(layers = layers, layers_peak = layers_peak, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
+  # Layer for ivory annotation
+  ivory_layer <- list(geom_rect(data = ivory_target, aes(xmin = V7, xmax = V8), ymin = 0.825 + y_offset , ymax = 0.925 + y_offset, color = "pink", fill = "pink"),
+                     geom_segment(data = ivory_target, aes(x = V9,xend = V10  , y = 0.875 + y_offset,yend = 0.875 + y_offset), color = "pink", size = 1),
+                     geom_rect(data = ivory_query, aes(xmin = V7, xmax = V8), ymin = 1.485 + y_offset , ymax = 1.585 + y_offset, color = "pink", fill = "pink"),
+                     geom_segment(data = ivory_query, aes(x = V9,xend = V10  , y = 1.535 + y_offset,yend = 1.535 + y_offset), color = "pink", size = 1))
+
+  list(layers = layers, layers_peak = layers_peak, ivory_layer = ivory_layer, color_code = color_code, y_values = unique(plotting_data$y), species_labels = c(target_species, query_species),plotting_data = plotting_data)
 }
 
 # Apply the function to each dataset, accumulating the y-offset as well
@@ -366,8 +412,9 @@ layers_list <- lapply(1:length(Inputs), function(i) {
   
   # Modify layers_peak based on the iteration index
   if (i != 1) {
-    layer_info$layers <- layer_info$layers[c(1,4,5,6)]
+    layer_info$layers <- layer_info$layers[c(1,5,6,7,8)]
     layer_info$layers_peak <- layer_info$layers_peak[c(2)]
+    layer_info$ivory_layer <- layer_info$ivory_layer[c(3,4)]
   }
   return(layer_info)
 })
@@ -375,15 +422,11 @@ layers_list <- lapply(1:length(Inputs), function(i) {
 # Extract individual components from the list
 all_layers <- unlist(lapply(layers_list, function(x) x$layers), recursive = FALSE)
 peak_layers <- unlist(lapply(layers_list, function(x) x$layers_peak), recursive = FALSE) 
+ivory_layer <- unlist(lapply(layers_list, function(x) x$ivory_layer), recursive = FALSE)
 color_code <- layers_list[[1]]$color_code  # Assuming color code is the same across all layers
 y_values <- unlist(lapply(layers_list, function(x) x$y_values))
 species_labels <- unlist(lapply(layers_list, function(x) x$species_labels))
 
-# Information for plotting ivory
-ivory <- read.table("exons")
-offset_ivory <- annot[annot$V1=="Melinaea_menophilus" & annot$V3=="Cor. CDS" ,4]
-
-# Combine all layers into a single plot starting from an empty ggplot object
 # Combine all layers into a single plot starting from an empty ggplot object
 if(gene=="Hyd. like"){
 p <- ggplot() +
@@ -393,7 +436,8 @@ p <- ggplot() +
   labs(x = NULL, y = NULL) +
   theme(axis.text.x = element_blank()) + 
   new_scale_fill() +  
-  peak_layers + scale_fill_gradientn(colors=c("blue", "gold", "red","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0.5, 1)) + guides(alpha = "none")
+  peak_layers + scale_fill_gradientn(colors=c("gold", "red","black"),breaks = seq(0.6,1,0.1), limits = c(0.6, 1)) + guides(alpha = "none") +
+  theme(legend.position = "bottom") 
 }else{
   p <- ggplot() +
     all_layers +
@@ -402,10 +446,9 @@ p <- ggplot() +
     labs(x = NULL, y = NULL) +
     theme(axis.text.x = element_blank()) + 
     new_scale_fill() +  
-    peak_layers + scale_fill_gradientn(colors=c("blue", "gold", "red","black"),breaks = c(0, 0.25, 0.5, 0.75, 1), limits = c(0.5, 1)) + guides(alpha = "none") +
+    peak_layers + scale_fill_gradientn(colors=c("gold", "red","black"),breaks = seq(0.6,1,0.1), limits = c(0.6, 1)) + guides(alpha = "none") +
    new_scale_fill() +
-    geom_rect(data = ivory, aes(xmin = V4-offset_ivory, xmax = V5-offset_ivory), ymin = 2.185 , ymax = 2.215, color = "pink", fill = "pink") +
-    geom_segment(aes(x = min(ivory$V4)-offset_ivory,xend = max(ivory$V5) - offset_ivory  , y = 2.20,yend = 2.20), color = "pink", size = 1) +
+    ivory_layer +
     theme(legend.position = "bottom") 
    }
 

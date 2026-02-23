@@ -158,7 +158,7 @@ done
 # plot nucmer results #
 #######################
 echo "START PLOTTING"  # Indicate that plotting is starting
-Rscript ./plotting_nucmer_windows_V3.R  $annotation  # Run R script for plotting
+Rscript ./plotting_nucmer_windows.R  $annotation  # Run R script for plotting
 mv *pdf $Results/mummer/sliding_windows_mapping/  # Move resulting PDFs to the results directory
 #rm *_genotype_phenotype_input.txt
 echo -E "ALL SLIDING WINDOWS FINISHED"  # Indicate that all sliding window analysis is completed
