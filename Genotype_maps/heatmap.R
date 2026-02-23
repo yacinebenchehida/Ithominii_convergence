@@ -93,15 +93,16 @@ prepare_focal_data <- function(input,threshold){
 # Function to prepare multisp data
 prepare_multisp_data <- function(input,threshold,sp){
 	data_multisp <- read.table(input)
+	data_multisp <-  data_multisp[data_multisp$V3 != -9, ]
 	colnames(data_multisp) <- c("SNP","Sample_name", "Subspecies", "Phenotype","Genotype","pvalue")
 
 	# Remove VCF separators of genotypes (i.e. / and |)
 	data_multisp$Genotype = gsub(pattern = "/", x = data_multisp$Genotype, replacement = "", perl = TRUE)
 	data_multisp$Genotype = gsub(pattern = "\\|", x = data_multisp$Genotype, replacement = "", perl = TRUE)
-	
+
 	#Take care of the situation where there are multiallelic states SNPs (Any non biallelic states is called other)
 	data_multisp[!(data_multisp$Genotype %in% c("..", "00", "01", "11")),5] = "Other"
-
+	
 	# Extract SNPs from the multisp VCF that are present in the GWAS analysis 
 	data_multisp$pvalue = -log10(data_multisp$pvalue)
 	data_multisp  <- data_multisp[data_multisp$pvalue > threshold, ]
@@ -135,12 +136,14 @@ merge_focal_multisp <- function(data, data_multisp, ordre) {
     for (i in unique(data$SNP)) {
         df1 <- data[data$SNP == i, ]
         df2 <- data_multisp[data_multisp$SNP == i, ]
-        tmp <- rbind(df1, df2)
+        df2_filtered <- df2[!df2$Sample_name %in% df1$Sample_name, ]  # Remove duplicates
+		tmp <- rbind(df1, df2_filtered)  # Merge the cleaned data
         list[[counter]] <- tmp
         counter = counter + 1
     }
 
     merged_gwas_multisp <- as.data.frame(do.call(rbind, list))
+	print(merged_gwas_multisp)
 
     # Check if any Subspecies in merged_gwas_multisp is missing from ordre
     ordre_species <- read.table(ordre)
@@ -244,7 +247,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 	counter = 1
 	colors_corresp <- read.table(colors_file)
 	sub <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
-
+	
 	for (i in 1:length(sub)) {
 		list5[[counter]] = sub[i]
 		info_group <-  merged_gwas_multisp[i,4]
@@ -272,7 +275,6 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 
 	# 5) Add SNP name at the bottom
 	colnames(Input) <- unique(merged_gwas_multisp$SNP)
-	print(merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3])
 	rownames(Input) <- merged_gwas_multisp[merged_gwas_multisp$SNP==unique(merged_gwas_multisp$SNP)[1],3]
 	print("SNPs annotation ready")
 
@@ -320,7 +322,7 @@ create_heatmap <- function(merged_gwas_multisp,colors_file,ordre,Input){
 # Main #
 ########
 # Create row genotype - phenotype file
-phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
+#phenotype_genotype(opt$species, opt$gene, opt$gwas, opt$vcf_focal, opt$vcf_multi, opt$scaffold, opt$start_pos, opt$end_pos, opt$phen_focal, opt$phen_multi)
 
 # prepare data for focal species 
 my_focal_species_input <- paste(opt$species,"_focal_genotype_phenotype_input.txt",sep="")
@@ -344,3 +346,4 @@ print("Ended succesfully")
 # Usage example:
 # Rscript ./heatmap.R -s Melinaea_mothone -g Cortex -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS/Melinaea_mothone.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_mothone/GWAS.Melmotiso.base.max0.7N.minGQ10.minQ10.GWASInd.mac2.varbi.CHR4.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_mothone/*vcf.gz -r SUPER_4 -x 1385004 -y 1398720 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Melinaea_mothone/Multisp.txt -t 7.5 -o ../Data/Cortex/Melinaea_mothone/order_file.txt -c ../Data/Cortex/Melinaea_mothone/Color.txt
 # Rscript ./heatmap.R -s Melinaea_marsaeus -g Optix -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Optix/GWAS/Melinaea_marsaeus.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Melinaea_marsaeus/Melinaea_marsaeus.GQ20.DP5.snps.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/5_Filtering/Results/multisp/Melinaea_marsaeus/multisp_Melinaea_marsaeus_genotypeGVCF.intervals_8.filters.DP4_GQ5_QUAL5.invariants.vcf.gz -r SUPER_2 -x 25965242 -y 26021063 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Optix/Melinaea_marsaeus/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Optix/Melinaea_marsaeus/Multisp.txt -t 10 -o ../Data/Optix/Melinaea_marsaeus/order_file.txt -c ../Data/Optix/Melinaea_marsaeus/Color.txt
+# Rscript ./heatmap.R -s Hypothyris_anastasia -g Cortex -w /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/GWAS/Figure_2/Data/Cortex/GWAS/Hypothyris_anastasia.txt -f /mnt/scratch/projects/biol-specgen-2018/yacine/Bioinformatics/6_Combine_intervals/Results/Hypothyris_anastasia/Hypothyris_anastasia.vcf.gz -m /mnt/scratch/projects/biol-specgen-2018/edd/phylogeny/aligned_methods/6_combine_intervals/Results/Hypothyris_anastasia.basic.filters.DP10_GQ30_Q30.snps.vcf.gz -r scaffold_12 -x 4189034 -y 4371524 -p /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Hypothyris_anastasia/Phenotypes.txt -q /mnt/scratch/projects/biol-specgen-2018/yacine/Conv_Evol/introgression_heatmaps/Data/Cortex/Hypothyris_anastasia/Multisp.txt -t 7 -o ../Data/Cortex/Hypothyris_anastasia/order_file.txt -c ../Data/Cortex/Hypothyris_anastasia/Color.txt
