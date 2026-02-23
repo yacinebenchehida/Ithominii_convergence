@@ -48,7 +48,7 @@ Regions matching the target chromosome and interval are excluded before running 
    --chromosomes <CHR>
 
 6. Reformats pixy output for plotting.
-7. Generates a PDF plot with the peak interval highlighted.
+7. Generates a PDF plot with the peak interval highlighted (using plot_nucldiv.R)
 
 ---
 
@@ -64,5 +64,3 @@ Inside the specified results directory:
 
 - `<prefix>_nucleotide_diversity.pdf`  
   Genome-wide π plot with peak region highlighted
-
-Intermediate VCF files are removed automatically.
