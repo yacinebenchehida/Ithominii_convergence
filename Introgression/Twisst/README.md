@@ -7,7 +7,7 @@ This folder contains a pipeline to:
 3. Infer a phylogeny for each window (NJ or ML)
 4. Combine all window trees into a single tree file
 5. Run **TWISST** topology weighting
-6. Plot topology weights and optionally run a block permutation significance test for enrichment within a peak
+6. Plot topology weights and optionally run a block permutation significance test if there is an enrichment of the introgression topology within the peak
 
 The main entry point is:
 
