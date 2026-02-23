@@ -362,16 +362,132 @@ The script runs TWISST and writes:
 
 - `Phylogeny.weights.tsv.gz`
 
-### Step 11: Plot TWISST results and optional introgression test
+### 11.1 Permutation framework (TWISST-based introgression test)
 
-If `--introg` is provided, the script:
-
-- parses the two taxa
-- runs `twisst_permutations.R` using:
-  - `START`, `END`
-  - `--ps`, `--pe` peak boundaries
-
+If `--introg`, `--ps`, and `--pe` are provided, the script performs a **block permutation test** to evaluate whether the focal introgression topology is significantly enriched within the peak region.
 If `--introg` is not provided, it runs `twisst.R`.
+
+---
+
+#### Definition of the introgression topology
+
+1. The script reads `Phylogeny.topos`.
+2. It identifies which topology groups the two taxa provided via `--introg` as sister taxa.
+3. The corresponding column is extracted from `Phylogeny.weights.tsv.gz`.
+4. This column is defined as `introgression_topo`.
+
+A window is considered to strongly support introgression if:
+
+```
+introgression_topo >= 0.95
+```
+
+The observed statistic is:
+
+> The number of windows within the peak region (`--ps` to `--pe`) where `introgression_topo >= 0.95`.
+
+---
+
+## Permutation strategy
+
+Two block-based permutation schemes are implemented.
+
+---
+
+### A) Inter-block permutation (no within-block shuffling)
+
+Function: `block_evaluation()`
+
+- The genome is divided into non-overlapping blocks of fixed size:
+
+```
+block_size = 100000 bp
+```
+
+- Block order is randomly permuted.
+- The internal structure of each block is preserved.
+- For each permutation:
+  - The number of windows within the peak region with  
+    `introgression_topo >= 0.95` is counted.
+
+Number of permutations:
+
+```
+n_permutations = 50000
+```
+
+**Purpose:**  
+Tests whether clustering of high-weight introgression windows within the peak
+is greater than expected under random large-scale genomic rearrangement.
+
+---
+
+### B) Inter + intra-block permutation (block shuffling with within-block reshuffling)
+
+Function: `block_intra_shuffling_evaluation_()`
+
+- The genome is divided into 100 kb blocks.
+- Block order is randomly permuted.
+- Additionally, topology weights are shuffled *within each block*.
+
+This removes:
+
+- Large-scale genomic structure
+- Local autocorrelation within blocks
+
+This is therefore a more conservative test.
+
+---
+
+## Test statistics
+
+For each permutation scheme:
+
+Let:
+
+- `observed` = number of peak windows with `introgression_topo >= 0.95`
+- `mu` = mean of permuted values
+- `sigma` = standard deviation of permuted values
+
+Z-score:
+
+```
+Z = (observed - mu) / sigma
+```
+
+Empirical p-value:
+
+```
+p = mean(permuted_values >= observed)
+```
+
+If no window in the peak exceeds 0.95:
+
+- The z-score is reported as:
+
+```
+"No intro Topo > 95% in peak"
+```
+
+---
+
+## Output
+
+Results are written to:
+
+```
+significance.txt
+```
+
+File structure:
+
+| zscore_inter | pvalue_inter | zscore_inter_intra | pvalue_inter_intra |
+|--------------|--------------|--------------------|--------------------|
+
+Where:
+
+- `zscore_inter` and `pvalue_inter` correspond to the inter-block permutation test.
+- `zscore_inter_intra` and `pvalue_inter_intra` correspond to the inter + intra-block permutation test.
 
 ### Step 12: Cleanup intermediate files
 
