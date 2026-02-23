@@ -141,42 +141,6 @@ Converted to tab-delimited:
 Results_<CHR>_<START>_<END>_<P1>_<P2>_<P3>_<O>.txt
 ```
 
-Windows with `nan` are removed.
-
----
-
-## Data Filtering (Statistics.R)
-
-The following filters are applied before plotting:
-
-- D < 0 → set to 0
-- fd < 0 → set to 0
-- fd > 1 → set to 0
-- fdM < 0 → set to NA
-- Remove lowest 2% of windows by `sitesUsed`
-
-This removes poorly supported windows.
-
----
-
-## Output Files
-
-Inside:
-
-```
-<OUTPUT_PATH>/<PREFIX>/
-```
-
-Generated files include:
-
-- `<PREFIX>_phenotype_file.txt`
-- `<PREFIX>.vcf.gz`
-- `<PREFIX>.geno.gz`
-- `output.csv`
-- `Results_*.txt`
-- `<PREFIX>_All_stats_plot.pdf`
-- `<PREFIX>_ABBA_BABA_stats_plot.pdf`
-
 ---
 
 ## Plots
@@ -203,46 +167,3 @@ Shows only:
 With title indicating P1, P2, P3, and Outgroup.
 
 ---
-
-## Interpretation Notes
-
-- Positive D indicates excess ABBA over BABA.
-- fd and fdM quantify introgression proportion.
-- Windows are defined by fixed SNP count (`-w`), not fixed physical size.
-- fd values are constrained to [0,1] after filtering.
-- Low coverage windows (lowest 2%) are removed.
-
----
-
-## Master Script
-
-The master script submits multiple combinations of P1, P2, P3 using:
-
-```
-sbatch ./fd ...
-```
-
-Each run produces an independent results directory.
-
----
-
-## Assumptions
-
-- VCF is correctly filtered upstream.
-- Population names in pop.txt are exact matches.
-- SNPs are bi-allelic.
-- Data are phased (even though phasing step is currently commented).
-
----
-
-## Summary
-
-This pipeline computes sliding-window ABBA–BABA statistics and produces:
-
-- Genome-wide D
-- fd
-- fdM
-- Diagnostic ABBA/BABA counts
-- Publication-ready PDF plots
-
-It is designed for high-throughput testing of many population combinations on HPC clusters.
