@@ -142,7 +142,7 @@ The launcher writes a phenotype file containing 2 columns:
 
 ---
 
-## 3) Pipeline steps (internal logic)
+## 3) Pipeline steps
 
 ### Step 1: Create working directory and phenotype file
 
@@ -177,7 +177,7 @@ part_id    start_position    end_position
 
 Important detail: each part contains **SNPS** variant sites (ALT != "."); invariant sites are included in the output VCF parts.
 
-### Step 4: Infer a phylogeny per window (SLURM batch jobs)
+### Step 4: Infer a phylogeny per window 
 
 `Phylogenies_job_submitter.py`:
 
@@ -271,7 +271,7 @@ If peak boundaries are provided, also:
 
 ---
 
-## 5) Permutation test (implemented in `twisst.R`)
+## 5) Permutation test
 
 When peak boundaries are provided (peak mode), `twisst.R` performs a block permutation test on the focal introgression topology.
 
