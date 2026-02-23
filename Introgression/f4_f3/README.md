@@ -165,7 +165,7 @@ Contigs are converted to numeric IDs to ensure compatibility with ADMIXTOOLS.
 
 ---
 
-## Step 4: Compute f4 (Primary Use)
+## Step 4: Compute f4
 
 In `f4_f3.R`:
 
@@ -197,23 +197,6 @@ pop1_pop2_pop3_pop4_f4.txt
 
 ---
 
-# 4) Interpretation of f4
-
-f4 tests the symmetry of allele frequency correlations:
-
-```
-f4(A, B; C, D)
-```
-
-Interpretation:
-
-- f4 ≠ 0 → allele frequency asymmetry
-- |Z| > 3 typically considered significant
-- Sign indicates direction of correlation
-
-Positive or negative values reflect excess allele sharing between specific pairs.
-
----
 
 # 5) Optional f3
 
@@ -229,8 +212,6 @@ Computes:
 f3(pop1; pop2, pop3)
 ```
 
-Negative f3 with significant Z-score indicates admixture in pop1.
-
 Output file:
 
 ```
@@ -238,21 +219,6 @@ pop1_pop2_pop3_f3.txt
 ```
 
 ---
-
-# 6) Output Structure
-
-For each test:
-
-```
-<OUTDIR>/<PREFIX>/
-    <PREFIX>_phenotype_file.txt
-    <PREFIX>_subspecies.txt
-    <PREFIX>.vcf.gz
-    Inputs.bed
-    Inputs.bim
-    Inputs.fam
-    pop1_pop2_pop3_pop4_f4.txt   (or f3 equivalent)
-```
 
 ---
 
@@ -268,14 +234,5 @@ Modules loaded in SLURM script:
 
 ---
 
-# 8) Notes
-
-- Designed primarily for **f4 statistics**
-- f3 implemented for convenience only
-- Uses genotype quality filtering (GQ >= 10)
-- Excludes sites with >20% missing data
-- Uses only biallelic SNPs
-- No LD pruning is performed
-- No MAF filtering is applied
 
 ---
