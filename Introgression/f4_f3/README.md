@@ -1,20 +1,20 @@
 # f4 / f3 Statistics Pipeline (ADMIXTOOLS)
 
-This pipeline computes **f4 statistics** (primary use) and optionally **f3 statistics** using the R package `admixtools`, starting from a multi-sample VCF.
+This pipeline computes **f4 statistics** and optionally **f3 statistics** using the R package `admixtools`, starting from a multi-sample VCF.
 
 The workflow:
 
 1. Subset a VCF to specific populations
 2. Filter SNPs (biallelic, low missingness, GQ >= 10)
 3. Convert to PLINK format
-4. Run `admixtools::f4()` (primary use)
+4. Run `admixtools::f4()`
 5. Write tab-delimited results
 
 The main execution script is:
 
-- `f4_f3.sh` (submitted via `sbatch`)
+- `f4_f3.sh`
 
-The master script simply loops over multiple population combinations and submits jobs.
+The master script shows simply loops over multiple population combinations and submits jobs.
 
 ---
 
@@ -25,7 +25,7 @@ Defines:
 - Input VCF
 - Output directory
 - Population file
-- Lists of P1–P4 combinations
+- Lists of P1–P4 combinations set in 4 arrays
 
 Submits jobs:
 
@@ -83,13 +83,6 @@ population_name    sample_ID
 Column 1: population label  
 Column 2: sample ID (must match VCF)
 
-Selection is done using:
-
-```
-awk '$1 ~ pattern'
-```
-
-This means population labels are matched using regex pattern matching.
 
 ---
 
@@ -109,7 +102,7 @@ This means population labels are matched using regex pattern matching.
 
 - `--p4`           Population 4
 
-Note: Although f3 is implemented, this pipeline is primarily designed for **f4 analyses**.
+If 3 populations are provided the pipeline runs **f3 analyses**, other (with 4 pop) it runs **f4 analyses**.
 
 ---
 
@@ -197,32 +190,7 @@ pop1_pop2_pop3_pop4_f4.txt
 
 ---
 
-
-# 5) Optional f3
-
-If `--stat f3`:
-
-```r
-qp3pop(data_plink, pop1, pop2, pop3)
-```
-
-Computes:
-
-```
-f3(pop1; pop2, pop3)
-```
-
-Output file:
-
-```
-pop1_pop2_pop3_f3.txt
-```
-
----
-
----
-
-# 7) Software Requirements
+# 4) Software Requirements
 
 Modules loaded in SLURM script:
 
