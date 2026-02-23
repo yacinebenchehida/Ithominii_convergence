@@ -147,7 +147,7 @@ Results_<CHR>_<START>_<END>_<P1>_<P2>_<P3>_<O>.txt
 
 ### 1. All statistics plot
 
-Faceted plot showing:
+Plot showing:
 
 - ABBA
 - BABA
@@ -163,7 +163,5 @@ Shows only:
 
 - ABBA
 - BABA
-
-With title indicating P1, P2, P3, and Outgroup.
 
 ---
