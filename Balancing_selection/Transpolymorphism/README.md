@@ -155,10 +155,3 @@ Inside the working directory:
 - polymorphic_sites_ratio_plot.pdf
 
 ---
-
-## Notes
-
-- No genotype-level quality filtering is performed.
-- Allele count threshold (≥6 per allele per species) is hard-coded.
-- Windowing is coordinate-based (fixed bp size).
-- Requires sufficient per-species sample depth to pass allele count threshold.
