@@ -9,7 +9,6 @@ for balancing selection using:
 -   NCD
 -   NCDopt
 -   NCDsub
--   NCDmid
 
 Analyses are performed in sliding windows (1000 bp windows, 500 bp
 step).
@@ -47,11 +46,11 @@ Provided via `-t` argument.
 
 -   Use `NADA` if no phylogenetic filtering is required
 
-### 4. Target Frequency
+### 4. Target Frequency of 0.5
 
-Provided via `-f`.
+Provided via `-f 0.5`.
 
--   Defines the target allele frequency used in NCD statistics
+-   Defines the target allele frequency used in NCD statistics 
 
 ------------------------------------------------------------------------
 
@@ -136,17 +135,12 @@ Statistics computed:
 -   **NCD**
 -   **NCDopt**
 -   **NCDsub**
--   **NCDmid**
-
-Target frequency defined with `--tf`.
 
 Primary output:
 
     final_results.txt
 
-Columns:
 
-    midpos  HKA  NCD  NCDopt  NCDsub  numSites  optF
 
 ------------------------------------------------------------------------
 
