@@ -20,7 +20,7 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 # Contents
 
-- **Reference_Genomes_assembly/** — Scripts used for genome assembly, generation, and curation.
+- **Reference_Genomes_assembly/** — Scripts used for genome assembly curation.
 
 - **BUSCO_TreePL/** — Scripts and related information for BUSCO phylogeny and molecular dating analyses, as presented in Figure 1.
 
