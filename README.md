@@ -24,11 +24,9 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 - **BUSCO_TreePL/** — Scripts and related information for BUSCO phylogeny and molecular dating analyses, as presented in Figure 1.
 
-- **Patternize/** — Scripts for quantifying and analyzing wing colour pattern variation across species.
+- **Patternize_QTL/** — Scripts for quantifying and analyzing wing colour pattern variation in *H. pardalinus* and *M. messenoides* + Scripts related to quantitative trait loci mapping to identify genomic regions associated with colour patterns in *H. pardalinus*.
 
 - **Pop_Structure/** — Scripts for quantifying population genetic structure using PCA.
-
-- **QTL/** — Scripts related to quantitative trait loci mapping to identify genomic regions associated with colour patterns in *H. pardalinus*.
 
 - **GWAS/** — Scripts used to perform genome-wide association analyses presented in the paper.
 
@@ -47,4 +45,4 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 - **Others/** — Additional scripts.
  
 # Contact
-For questions or feedback, please contact y.benchehida@sheffield.ac.uk.
+For questions or feedback, please contact yacine.ben.chehida@hotmail.fr.
