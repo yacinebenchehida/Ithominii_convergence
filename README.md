@@ -4,7 +4,7 @@
 
 # Genetic parallelism underpins convergent mimicry coloration across Lepidoptera
 
-Welcome to the  GitHub repository for the scientific publication "***Genetic parallelism underpins convergent mimicry coloration across Lepidoptera***" by **Ben Chehida Y., van der Heijden S. M. E., Page J. E., et al. 2025**.
+Welcome to the  GitHub repository for the scientific publication "***Genetic parallelism underpins convergent mimicry coloration across Lepidoptera***" by **Ben Chehida Y., van der Heijden S. M. E., Page J. E., et al. 2026**.
 
 # Overview
 This repository contains all the materials related to our research published in ***Plos Biology***. Here, you will find:
@@ -30,7 +30,7 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 - **GWAS/** — Scripts used to perform genome-wide association analyses presented in the paper.
 
-- **GWAS_Peak_Alignments/** — Sliding window alignments and candidate regions identified in GWAS peak analyses between species, as shown in Figure 4.
+- **GWAS_Peak_Alignments/** — Sliding window alignments and candidate regions identified in GWAS peak analyses between species, as shown in Figure 3.
 
 - **RNAseq/** — Scripts and related information for: (1) generation of de novo transcriptomes, (2) annotation of *ivory*, and (3) differential expression analyses in *Mechanitis messenoides* and *Melinaea menophilus*.
 
