@@ -26,7 +26,7 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 - **Patternize_QTL/** — Scripts for quantifying and analyzing wing colour pattern variation in *H. pardalinus* (Fig 2) and *M. messenoides* (Fig 4, S10 Fig, S38 Fig) + Scripts related to quantitative trait loci mapping to identify genomic regions associated with colour patterns in *H. pardalinus* (Fig 2, S16 Fig).
 
-- **Pop_Structure/** — Scripts for quantifying population genetic structure using PCA (S17-S23 Fig).
+- **Pop_Structure/** — Scripts for quantifying population genetic structure using PCA (S17 - S23 Fig).
 
 - **GWAS/** — Scripts used to perform genome-wide association analyses presented in the paper (Fig 2, Fig 4, S2 Fig, S10 Fig, S14 Fig, S38 Fig).
 
@@ -38,7 +38,7 @@ Our work focuses on assessing the genomic basis of convergent evolution in mimet
 
 - **Genotype_maps/** - Pipeline and explanations to generate the genotype maps as showed in the Extended Data (S3 - S13 Fig). 
 
-- **Balancing_Selection/** — Scripts and related information for performing three types of balancing selection tests used in this study: (1) sliding window pi (across multiple species), (2) transpolymorphism analysis, and (3) MuteBass (S30 - S32 Fig).
+- **Balancing_Selection/** — Scripts and related information for performing three types of balancing selection tests used in this study: (1) sliding window pi (across multiple species), (2) transpolymorphism analysis, and (3) MuteBass. Presented in several Extended Data figures (S30 - S32 Fig).
 
 - **Transcription_Factor/** — Scripts and related information investigating transcription factor binding motifs around GWAS peaks (S37 Fig).
 
